@@ -1,6 +1,6 @@
 package com.a2sidorov.mychat;
 
-import com.a2sidorov.mychat.network.NetworkClient;
+import com.a2sidorov.mychat.network.Client;
 
 import javax.swing.*;
 import javax.swing.text.DefaultCaret;
@@ -9,11 +9,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
 import java.util.regex.Pattern;
 
 public class MychatClient extends JFrame {
 
-    public NetworkClient client;
+    public Client client;
     public static JTextArea textChat;
     public static JList listUsers;
     private JPanel panelMain;
@@ -33,7 +34,13 @@ public class MychatClient extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                client.disconnect();
+                /*
+                try {
+                    client.disconnect();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                */
                 System.exit(0);
             }
         });
@@ -56,22 +63,27 @@ public class MychatClient extends JFrame {
         buttonDialog.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+
                 String nickname = fieldDialog.getText().trim();
                 if(InputValidation.isValidNickname(nickname)) {
-                    NetworkClient.setNickname(nickname);
                     panelMain.removeAll();
                     panelMain.revalidate();
                     createMainView();
-                    client = new NetworkClient("localhost", 1050);
-                    client.connectToServer();
+                    try {
+                        client = new Client();
+                        client.setNickname(nickname);
+                        client.connectToServer("localhost",1050 ); //TODO move params to client config
+                    } catch (Exception e1) {
+                        e1.printStackTrace();
+                    }
+
                 }
+
             }
         });
         panelMain.add(buttonDialog);
 
     }
-
-
 
     private void createMainView() {
         panelMain = new JPanel(new BorderLayout());
@@ -103,9 +115,11 @@ public class MychatClient extends JFrame {
         buttonSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+
                 String text = fieldInput.getText();
-                client.send(text);
+                client.sendMessage(text);
                 fieldInput.setText("");
+
             }
         });
         panelInput.add(buttonSend, BorderLayout.EAST);
@@ -113,10 +127,12 @@ public class MychatClient extends JFrame {
     }
 
     public static void main(String[] args) {
+
         SwingUtilities.invokeLater(() -> {
             new MychatClient().setVisible(true);
 
         });
+
     }
 
 }

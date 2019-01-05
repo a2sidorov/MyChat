@@ -2,115 +2,142 @@ package com.a2sidorov.mychat.network;
 
 import com.a2sidorov.mychat.MychatClient;
 
-import javax.swing.*;
-import javax.swing.text.Utilities;
 import java.io.*;
-import java.net.ConnectException;
-import java.net.Socket;
-import java.net.SocketException;
-import java.sql.SQLOutput;
+import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.SocketChannel;
+import java.util.Iterator;
+import java.util.Scanner;
+import java.util.Set;
 
 public class NetworkClient {
+    /*
 
-    private String ipAddress;
+    private SocketChannel channel;
+    private String serverAddress;
     private int serverPort;
-    private Socket socket;
-    //private ObjectInputStream input;
-    //private ObjectOutputStream output;
-    private DataOutputStream output;
-    private DataInputStream input;
-    private static String nickname;
+    private String nickname = "Noname";
+    private ByteBuffer buffer;
 
-    public static void setNickname(String nickname) {
-        NetworkClient.nickname = nickname;
-    }
-
-    public NetworkClient(String ipAddress, int serverPort) {
-        this.ipAddress = ipAddress;
+    public NetworkClient(String serverAddress, int serverPort) throws Exception {
+        this.serverAddress = serverAddress;
         this.serverPort = serverPort;
+        buffer = ByteBuffer.allocate(256);
+
     }
 
-    public void connectToServer() {
+    public void disconnect() throws IOException {
+        channel.close();
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+
+    public void connect() throws IOException {
+        Selector selector = Selector.open();
+        channel = SocketChannel.open(new InetSocketAddress(serverAddress, serverPort));
+        channel.configureBlocking(false);
+        //sendNickname();
+
         new Thread(() -> {
-            try {
-                //connecting to server
-                socket = new Socket(ipAddress, serverPort);
-                System.out.println("Client socket initialized on port " + socket.getPort());
+            while (true) {
 
-                //setting up streams
-                output = new DataOutputStream(socket.getOutputStream());
-                input = new DataInputStream(socket.getInputStream());
-                System.out.println("Streams are set up.");
-
-                //sending login packet
-                output.writeUTF("LOGIN;" + nickname);
-
-                while(socket.isConnected()) {
-                    //MychatClient.textChat.append(input.readUTF() + "\n");
-                    String rawData = input.readUTF();
-                    process(rawData);
+                try {
+                    selector.select();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
+                Set<SelectionKey> selectedKeys = selector.selectedKeys();
+                Iterator<SelectionKey> iter = selectedKeys.iterator();
+                while (iter.hasNext()) {
+                    System.out.println("looping");
 
-            } catch(ConnectException ce) {
-                MychatClient.textChat.append("Server is down.\n");
-                return;
-            } catch(SocketException se) {
-                return;
-            } catch(IOException e) {
-                e.printStackTrace();
-                return;
+                    SelectionKey key = iter.next();
+
+                    if (key.isAcceptable()) {
+                        try {
+                            register(selector, channel);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        System.out.println("Client connected.");
+                    }
+
+                    if (key.isReadable()) {
+                        try {
+                            read(selector, key);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    writeToSockets();
+
+                    if (key.isWritable()) {
+                        try {
+                            write(key);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    iter.remove();
+                }
             }
-
         }).start();
-
     }
 
-    private void process(String rawData) {
-        String[] data = rawData.trim().split(";");
-        System.out.println(rawData);
-        PacketType type = PacketType.valueOf(data[0]);
-        switch(type) {
-            case MESSAGE:
-                MychatClient.textChat.append(data[1] +": " +  data[2] + "\n");
-                break;
-            case NICKNAMES:
-                String[] userlist = java.util.Arrays.copyOfRange(data, 1, data.length);
-                //System.out.println(str);
-                MychatClient.listUsers.setListData(userlist);
-                break;
-                default: System.out.println("Invalid packet.");
+    private void sendNickname() throws IOException {
+        buffer.putChar('c');
+        buffer.put(nickname.getBytes());
+        buffer.flip();
+        channel.write(buffer);
+        buffer.clear();
+    }
+
+    private void process() throws IOException {
+        channel.read(buffer);
+        buffer.flip();
+        char packetType = buffer.getChar();
+        String data = drain(buffer);
+        buffer.clear();
+
+        if (packetType == 'l') {
+            String[] userList = data.split(",");
+            MychatClient.listUsers.setListData(userList);
+        }
+
+        if (packetType == 'm') {
+            MychatClient.textChat.append(data + '\n');
         }
 
     }
 
+    public void sendMessage(String message) throws IOException {
+        buffer.putChar('m');
+        String data = nickname + ": " + message;
+        buffer.put(data.getBytes());
+        buffer.flip();
+        channel.write(buffer);
+        buffer.clear();
 
-    public void send(String text) {
-        try {
-            if(socket == null && text.equals("enter")) {
-                connectToServer();
-            }
-            if(output != null) {
-                output.writeUTF("MESSAGE;" + nickname + ";" + text);
-                output.flush();
-            }
-        } catch(IOException e) {
-            e.printStackTrace();
-        }
     }
 
-    public void disconnect() {
-        try {
-            if(socket != null) {
-                output.writeUTF("LOGOUT;" + nickname);
-                output.close();
-                input.close();
-                socket.close();
-            }
-        } catch(IOException e) {
-            e.printStackTrace();
+    private String drain(ByteBuffer buffer) {
+        StringBuffer sb = new StringBuffer();
+        while (buffer.hasRemaining()) {
+            sb.append((char)buffer.get());
         }
+        return sb.toString();
     }
 
-
+    public boolean isConnected() {
+        return channel.isConnected();
+    }
+    */
 
 }
