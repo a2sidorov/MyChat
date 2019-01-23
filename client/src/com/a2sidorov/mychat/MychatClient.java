@@ -111,6 +111,7 @@ public class MychatClient extends JFrame {
         //fieldInput.setPreferredSize(new Dimension(500,15));
         panelInput.add(fieldInput, BorderLayout.CENTER);
 
+
         JButton buttonSend = new JButton("Send");
         buttonSend.addActionListener(new ActionListener() {
             @Override
