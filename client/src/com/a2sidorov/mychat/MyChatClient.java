@@ -1,6 +1,8 @@
 package com.a2sidorov.mychat;
 
+import com.a2sidorov.mychat.controllers.InputValidation;
 import com.a2sidorov.mychat.network.Client;
+import com.a2sidorov.mychat.views.EntryView;
 
 import javax.swing.*;
 import javax.swing.text.DefaultCaret;
@@ -9,20 +11,18 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.IOException;
-import java.util.regex.Pattern;
 
-public class MychatClient extends JFrame {
+public class Main extends JFrame {
 
     public Client client;
     public static JTextArea textChat;
     public static JList listUsers;
-    private JPanel panelMain;
+    private JPanel mainPanel;
 
 
-    public MychatClient() {
+    public Main() {
 
-        createDialogView();
+        createFormView();
 
         //createMainView();
 
@@ -47,17 +47,22 @@ public class MychatClient extends JFrame {
 
     }
 
-    private void createDialogView() {
-        panelMain = new JPanel();
-        getContentPane().add(panelMain);
+    private void createFormView() {
+        mainPanel = new JPanel();
+        mainPanel.setLayout(new GridBagLayout());
+        getContentPane().add(mainPanel);
+
+        JPanel dialogPanel = new JPanel();
+        dialogPanel.setSize(new Dimension(200, 200));
+        mainPanel.add(dialogPanel, BorderLayout.CENTER);
 
         JLabel labelDialog = new JLabel();
         labelDialog.setText("Enter a nickname:");
-        panelMain.add(labelDialog);
+        dialogPanel.add(labelDialog);
 
         JTextField fieldDialog = new JTextField();
         fieldDialog.setPreferredSize(new Dimension(200, 20));
-        panelMain.add(fieldDialog);
+        dialogPanel.add(fieldDialog);
 
         JButton buttonDialog = new JButton("Save");
         buttonDialog.addActionListener(new ActionListener() {
@@ -66,8 +71,8 @@ public class MychatClient extends JFrame {
 
                 String nickname = fieldDialog.getText().trim();
                 if(InputValidation.isValidNickname(nickname)) {
-                    panelMain.removeAll();
-                    panelMain.revalidate();
+                    dialogPanel.removeAll();
+                    dialogPanel.revalidate();
                     createMainView();
                     try {
                         client = new Client();
@@ -81,19 +86,19 @@ public class MychatClient extends JFrame {
 
             }
         });
-        panelMain.add(buttonDialog);
+        mainPanel.add(buttonDialog);
 
     }
 
     private void createMainView() {
-        panelMain = new JPanel(new BorderLayout());
-        getContentPane().add(panelMain);
+        mainPanel = new JPanel(new BorderLayout());
+        getContentPane().add(mainPanel);
 
         //East
         listUsers = new JList();
         listUsers.setPreferredSize(new Dimension(200, 0));
         listUsers.setBorder(BorderFactory.createTitledBorder("Connected Users"));
-        panelMain.add(listUsers, BorderLayout.EAST);
+        mainPanel.add(listUsers, BorderLayout.EAST);
 
         //Center
         textChat = new JTextArea();
@@ -101,11 +106,11 @@ public class MychatClient extends JFrame {
         ((DefaultCaret) textChat.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE); //auto scroll down to last message
         JScrollPane textChatSP = new JScrollPane(textChat);
         textChatSP.setBorder(BorderFactory.createTitledBorder("Chat"));
-        panelMain.add(textChatSP, BorderLayout.CENTER);
+        mainPanel.add(textChatSP, BorderLayout.CENTER);
 
         //South
         JPanel panelInput = new JPanel(new BorderLayout());
-        panelMain.add(panelInput, BorderLayout.SOUTH);
+        mainPanel.add(panelInput, BorderLayout.SOUTH);
 
         JTextField fieldInput = new JTextField();
         //fieldInput.setPreferredSize(new Dimension(500,15));
@@ -129,9 +134,14 @@ public class MychatClient extends JFrame {
 
     public static void main(String[] args) {
 
+        /*
         SwingUtilities.invokeLater(() -> {
-            new MychatClient().setVisible(true);
+            new Main().setVisible(true);
+        });
+        */
 
+        SwingUtilities.invokeLater(() -> {
+            new EntryView();
         });
 
     }
