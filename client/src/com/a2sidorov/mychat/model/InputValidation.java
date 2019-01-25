@@ -1,4 +1,4 @@
-package com.a2sidorov.mychat;
+package com.a2sidorov.mychat.controller;
 
 public abstract class InputValidation {
 
