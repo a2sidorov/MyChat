@@ -1,8 +1,10 @@
 package com.a2sidorov.mychat;
 
-import com.a2sidorov.mychat.controllers.InputValidation;
-import com.a2sidorov.mychat.network.Client;
-import com.a2sidorov.mychat.views.EntryView;
+import com.a2sidorov.mychat.controller.IntroController;
+import com.a2sidorov.mychat.model.InputValidation;
+import com.a2sidorov.mychat.model.Settings;
+import com.a2sidorov.mychat.network.NetworkClient;
+import com.a2sidorov.mychat.view.IntroView;
 
 import javax.swing.*;
 import javax.swing.text.DefaultCaret;
@@ -12,15 +14,15 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-public class Main extends JFrame {
+public class MyChatClient extends JFrame {
 
-    public Client client;
+    public NetworkClient networkClient;
     public static JTextArea textChat;
     public static JList listUsers;
     private JPanel mainPanel;
 
 
-    public Main() {
+    public MyChatClient() {
 
         createFormView();
 
@@ -36,7 +38,7 @@ public class Main extends JFrame {
             public void windowClosing(WindowEvent e) {
                 /*
                 try {
-                    client.disconnect();
+                    networkClient.disconnect();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
@@ -70,14 +72,14 @@ public class Main extends JFrame {
             public void actionPerformed(ActionEvent e) {
 
                 String nickname = fieldDialog.getText().trim();
-                if(InputValidation.isValidNickname(nickname)) {
+                if(InputValidation.isNicknameValid(nickname)) {
                     dialogPanel.removeAll();
                     dialogPanel.revalidate();
                     createMainView();
                     try {
-                        client = new Client();
-                        client.setNickname(nickname);
-                        client.connectToServer("localhost",1050 ); //TODO move params to client config
+                        networkClient = new NetworkClient();
+                        networkClient.setNickname(nickname);
+                        networkClient.connectToServer("localhost",1050 ); //TODO move params to networkClient config
                     } catch (Exception e1) {
                         e1.printStackTrace();
                     }
@@ -123,7 +125,7 @@ public class Main extends JFrame {
             public void actionPerformed(ActionEvent e) {
 
                 String text = fieldInput.getText();
-                client.sendMessage(text);
+                networkClient.sendMessage(text);
                 fieldInput.setText("");
 
             }
@@ -134,14 +136,12 @@ public class Main extends JFrame {
 
     public static void main(String[] args) {
 
-        /*
         SwingUtilities.invokeLater(() -> {
-            new Main().setVisible(true);
-        });
-        */
-
-        SwingUtilities.invokeLater(() -> {
-            new EntryView();
+            Settings settings = new Settings();
+            IntroView introView = new IntroView();
+            IntroController introController = new IntroController(settings, introView);
+            introController.initView();
+            introController.initController();
         });
 
     }

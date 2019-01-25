@@ -1,6 +1,6 @@
 package com.a2sidorov.mychat.network;
 
-public class NetworkClient {
+public class NetworkClientOld {
     /*
 
     private SocketChannel channel;
@@ -9,7 +9,7 @@ public class NetworkClient {
     private String nickname = "Noname";
     private ByteBuffer buffer;
 
-    public NetworkClient(String serverAddress, int serverPort) throws Exception {
+    public NetworkClientOld(String serverAddress, int serverPort) throws Exception {
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;
         buffer = ByteBuffer.allocate(256);
@@ -52,7 +52,7 @@ public class NetworkClient {
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-                        System.out.println("Client connected.");
+                        System.out.println("NetworkClient connected.");
                     }
 
                     if (key.isReadable()) {

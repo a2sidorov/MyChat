@@ -3,21 +3,19 @@ package com.a2sidorov.mychat;
 
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.Arrays;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.*;
 
 
-@DisplayName("Testing Main class")
+@DisplayName("Testing MyChatServer class")
 class MainTest {
 
-    private static Main server;
+    private static MyChatServer server;
 
     private static SocketChannel clientSocketChannel;
     private static ByteBuffer clientReadBuffer;
@@ -30,7 +28,7 @@ class MainTest {
         properties.put("address", "127.0.0.1");
         properties.put("port", "1050");
 
-        server = Main.getInstance(properties);
+        server = MyChatServer.getInstance(properties);
         server.start();
 
         clientReadBuffer = ByteBuffer.allocate(1024);

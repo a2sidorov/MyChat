@@ -7,13 +7,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-class Config {
+class SettingsLoader {
 
     String configPath;
     Properties properties;
     private Map<String, String> defaultProperties;
 
-    Config() {
+    SettingsLoader() {
         String rootPath = System.getProperty("user.dir");
         configPath = rootPath + "/.config";
 

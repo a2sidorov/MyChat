@@ -1,7 +1,5 @@
 package com.a2sidorov.mychat;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
@@ -10,19 +8,19 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 /**
- * The MyChat Main.
+ * The MyChat MyChatServer.
  *
  * @author Andrei Sidorov
  * @version 1.0
  * @since 2018.11.09
  */
 
-public class Main {
+public class MyChatServer {
 
     private int port;
     private InetAddress address;
 
-    private Main(Properties properties) {
+    private MyChatServer(Properties properties) {
         try {
             this.address = InetAddress.getByName(properties.getProperty("address"));
         } catch (UnknownHostException e) {
@@ -32,10 +30,10 @@ public class Main {
     }
 
     //implementing the Singleton pattern
-    private static Main server;
-    static Main getInstance(Properties properties) {
+    private static MyChatServer server;
+    static MyChatServer getInstance(Properties properties) {
         if (server == null) {
-            server = new Main(properties);
+            server = new MyChatServer(properties);
         }
         return server;
     }
@@ -57,10 +55,10 @@ public class Main {
 
     public static void main(String[] args) {
 
-        Config config = new Config();
+        SettingsLoader config = new SettingsLoader();
         Properties properties = config.load();
 
-        Main server = Main.getInstance(properties);
+        MyChatServer server = MyChatServer.getInstance(properties);
         server.start();
     }
 

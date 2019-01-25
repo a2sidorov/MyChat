@@ -1,161 +1,98 @@
 package com.a2sidorov.mychat.network;
 
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import com.a2sidorov.mychat.controller.MainController;
+import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-public class SocketReader {
+@DisplayName("Testing SocketReader class")
+class SocketReaderTest {
+
+    private static SocketReader socketReader;
+    private static MainController mainController;
+    private static ByteBuffer readBuffer;
+
+    @BeforeAll
+    static void initAll() {
+        SocketChannel socketChannel = mock(SocketChannel.class);
+        mainController = mock(MainController.class);
+        socketReader = new SocketReader(socketChannel, mainController);
+        readBuffer = ByteBuffer.allocate(1024);
+    }
 
     @Nested
-    @DisplayName("Testing readFullPackets method")
+    @DisplayName("Testing readFullPackets")
     class readFullPacketsTest {
-        @DisplayName("when one full packet then add it to the queue")
+
+        @DisplayName("when a full packet is read then call parsePacket with it")
         @Test
-        void readFullPacketsTest1() {
+        void readFullPacketTest1() {
+            SocketReader socketReaderSpied = spy(socketReader);
+
             String packet = "m/message";
-            byte[] packetBytes = packet.getBytes();
-            readBuffer.putShort((short) packetBytes.length);
-            readBuffer.put(packetBytes);
+            readBuffer.putShort((short) packet.getBytes().length);
+            readBuffer.put(packet.getBytes());
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer);
-            readBuffer.clear();
-            assertEquals(packet, inboundPacketQueue.poll());
+
+            socketReaderSpied.readFullPackets(readBuffer);
+            verify(socketReaderSpied).parsePacket(packet);
         }
 
-
-        @DisplayName("when two full packets then add them to the queue")
+        @DisplayName("when a partial packet is read then skip parsing")
         @Test
-        void readFullPacketsTest2() {
-            String packet1 = "m/message1";
-            byte[] packet1Bytes = packet1.getBytes();
-            readBuffer.putShort((short) packet1Bytes.length);
-            readBuffer.put(packet1Bytes);
+        void readFullPacketTest2() {
+            SocketReader socketReaderSpied = spy(socketReader);
 
-            String packet2 = "m/message2";
-            byte[] packet2Bytes = packet2.getBytes();
-            readBuffer.putShort((short) packet2Bytes.length);
-            readBuffer.put(packet2Bytes);
+            String fullPacket = "m/message";
+            String parialPacket = "m/mess";
+            readBuffer.putShort((short) fullPacket.getBytes().length);
+            readBuffer.put(parialPacket.getBytes());
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer);
-            readBuffer.clear();
-            assertEquals(packet1, inboundPacketQueue.poll());
-            assertEquals(packet2, inboundPacketQueue.poll());
+
+            socketReaderSpied.readFullPackets(readBuffer);
+            verify(socketReaderSpied, never()).parsePacket(parialPacket);
         }
 
-        @DisplayName("when one and a half packets then add one to the queue")
+    }
+
+
+
+    @Nested
+    @DisplayName("Testing parsePacket method")
+    class parsePacketTest {
+
+        @DisplayName("when packet is a message then update the text area")
         @Test
-        void readFullPacketsTest3() {
-            String packet1 = "m/message1";
-            byte[] packet1Bytes = packet1.getBytes();
-            readBuffer.putShort((short) packet1Bytes.length);
-            readBuffer.put(packet1Bytes);
+        void parsePacketTest1() {
+            String packet = "m/user message";
 
-            String packet2 = "m/message2";
-            byte[] bytes2 = packet2.getBytes();
-            byte[] firstPart = "m/me".getBytes();
-            readBuffer.putShort((short) bytes2.length);
-            readBuffer.put(firstPart);
-
-            readBuffer.flip();
-            socketReader.readFullPackets(readBuffer); //processing the first part
-            readBuffer.clear();
-            assertEquals(packet1, inboundPacketQueue.poll());
-            assertNull(inboundPacketQueue.poll());
+            socketReader.parsePacket(packet);
+            verify(mainController).updateTextArea("user message");
         }
 
-        @DisplayName("when the partial size of a packet then add nothing to the queue")
+        @DisplayName("when packet is a server message then update the text area")
         @Test
-        void readFullPacketsTest4() {
+        void parsePacketTest2() {
+            String packet = "s/server message";
 
-            readBuffer.put((byte) 0);
-
-            readBuffer.flip();
-            socketReader.readFullPackets(readBuffer);
-            readBuffer.clear();
-            assertNull(inboundPacketQueue.poll());
+            socketReader.parsePacket(packet);
+            verify(mainController).updateTextArea("server message");
         }
 
-        @DisplayName("when a partial packet then add nothing to the queue")
+        @DisplayName("when packet is a nickname list then update the user list")
         @Test
-        void readFullPacketsTest5() {
-            String packet = "m/message";
-            byte[] bytes = packet.getBytes();
-            readBuffer.putShort((short) bytes.length);
+        void parsePacketTest3() {
+            String packet = "n/[nickname1,nickname2]";
+            String[] nicknames = packet.substring(3, packet.length() - 1).split(",");
 
-            readBuffer.flip();
-            socketReader.readFullPackets(readBuffer); //processing the first part
-            readBuffer.clear();
-            assertNull(inboundPacketQueue.poll());
-        }
-
-        @DisplayName("when a packet and one byte of the size of the next packet then add one to the queue")
-        @Test
-        void readFullPacketsTest6() {
-
-            String packet1 = "m/message1";
-            byte[] bytes1 = packet1.getBytes();
-            readBuffer.putShort((short) bytes1.length);
-            readBuffer.put(bytes1);
-
-            readBuffer.put((byte) 0);
-
-            readBuffer.flip();
-            socketReader.readFullPackets(readBuffer);
-            readBuffer.clear();
-            assertEquals(packet1, inboundPacketQueue.poll());
-            assertNull(inboundPacketQueue.poll());
-        }
-
-        @DisplayName("when a packet and two bytes of the size of the next packet then add one to the queue")
-        @Test
-        void readFullPacketsTest7() {
-
-            String packet1 = "m/message1";
-            byte[] bytes1 = packet1.getBytes();
-            readBuffer.putShort((short) bytes1.length);
-            readBuffer.put(bytes1);
-
-            String packet2 = "m/message2";
-            byte[] bytes2 = packet2.getBytes();
-            readBuffer.putShort((short) bytes2.length);
-
-            readBuffer.flip();
-            socketReader.readFullPackets(readBuffer); //processing the first part
-            readBuffer.clear();
-            assertEquals(packet1, inboundPacketQueue.poll());
-            assertNull(inboundPacketQueue.poll());
-        }
-
-        @DisplayName("when a packet missing last byte then add nothing to the queue")
-        @Test
-        void readFullPacketsTest8() {
-
-            String packet1 = "m/message1";
-            byte[] packet1Bytes = packet1.getBytes();
-            readBuffer.putShort((short) packet1Bytes.length);
-            readBuffer.put(packet1Bytes);
-
-            String packet2 = "m/message2";
-            byte[] packet2Bytes = packet2.getBytes();
-            byte[] packet2BytesPart1 = Arrays.copyOfRange(packet2Bytes, 0, packet2Bytes.length - 1);
-            byte[] packet2BytesPart2 = Arrays.copyOfRange(packet2Bytes, packet2Bytes.length - 1, packet2Bytes.length);
-
-            readBuffer.putShort((short) packet2Bytes.length);
-            readBuffer.put(packet2BytesPart1);
-
-            readBuffer.flip();
-            socketReader.readFullPackets(readBuffer); //processing the first part
-            readBuffer.clear();
-
-            assertEquals(packet1, inboundPacketQueue.poll());
-            assertNull(inboundPacketQueue.poll());
+            socketReader.parsePacket(packet);
+            verify(mainController).updateListNicknames(nicknames);
         }
     }
 }

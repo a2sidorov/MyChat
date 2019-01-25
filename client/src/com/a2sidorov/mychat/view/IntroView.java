@@ -4,7 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Properties;
 
-public class ConnectionView {
+public class IntroView {
 
     private JFrame frame;
     private JLabel labelAddress;
@@ -15,25 +15,24 @@ public class ConnectionView {
     private JTextField textFieldNickname;
     private JButton connectButton;
 
-        public ConnectionView(Properties properties) {
+
+
+    public IntroView() {
             frame = new JFrame();
             frame.setTitle("MyChat");
             frame.setSize(600,500);
             frame.setLocationRelativeTo(null);
             frame.setResizable(false);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setVisible(true);
+
 
             /* Create UI emements */
             labelAddress = new JLabel("IP Address: ");
-            labelPort = new JLabel("Port");
-            labelNickname = new JLabel("Nickname");
+            labelPort = new JLabel("Port: ");
+            labelNickname = new JLabel("Nickname: ");
             textFieldAddress = new JTextField(12);
-            textFieldAddress.setText(properties.getProperty("address"));
             textFieldPort = new JTextField(12);
-            textFieldPort.setText(properties.getProperty("port"));
             textFieldNickname = new JTextField(12);
-            textFieldNickname.setText(properties.getProperty("nickname"));
             connectButton = new JButton("Connect");
 
             /* Add UI elements to frame */
@@ -84,32 +83,42 @@ public class ConnectionView {
             box.add(Box.createVerticalGlue());
             box.add(panelForm);
             box.add(Box.createVerticalGlue());
-            frame.getContentPane().add(box);
 
-
-
-
-            /*
-            JPanel panelMain = new JPanel();
-            panelMain.setLayout(new GridBagLayout());
-            frame.getContentPane().add(panelMain);
-
-            JPanel dialogPanel = new JPanel();
-            dialogPanel.setSize(new Dimension(200, 200));
-            mainPanel.add(dialogPanel, BorderLayout.CENTER);
-
-            JLabel labelDialog = new JLabel();
-            labelDialog.setText("Enter a nickname:");
-            dialogPanel.add(labelDialog);
-
-            JTextField fieldDialog = new JTextField();
-            fieldDialog.setPreferredSize(new Dimension(200, 20));
-            dialogPanel.add(fieldDialog);
-
-            JButton buttonDialog = new JButton("Save");
-            */
-
-
+            frame.add(box);
+            frame.setVisible(true);
         }
+
+    public JFrame getFrame() {
+        return frame;
+    }
+
+    public JTextField getTextFieldAddress() {
+        return textFieldAddress;
+    }
+
+    public JButton getConnectButton() {
+        return connectButton;
+    }
+
+    public JTextField getTextFieldPort() {
+        return textFieldPort;
+    }
+
+    public JTextField getTextFieldNickname() {
+        return textFieldNickname;
+    }
+
+    public void setTextFieldAddress(JTextField textFieldAddress) {
+        this.textFieldAddress = textFieldAddress;
+    }
+
+    public void setTextFieldPort(JTextField textFieldPort) {
+        this.textFieldPort = textFieldPort;
+    }
+
+    public void setTextFieldNickname(JTextField textFieldNickname) {
+        this.textFieldNickname = textFieldNickname;
+    }
+
 
 }
