@@ -106,4 +106,8 @@ public class Settings {
     public String getNickname() {
         return nickname;
     }
+
+    public Notification getNotification() {
+        return notification;
+    }
 }

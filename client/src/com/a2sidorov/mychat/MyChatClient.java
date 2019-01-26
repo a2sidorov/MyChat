@@ -14,7 +14,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-public class MyChatClient extends JFrame {
+public class MyChatClient {
+
+    /*
 
     public NetworkClient networkClient;
     public static JTextArea textChat;
@@ -36,14 +38,12 @@ public class MyChatClient extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                /*
+
                 try {
                     networkClient.disconnect();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-                */
-                System.exit(0);
             }
         });
 
@@ -77,8 +77,8 @@ public class MyChatClient extends JFrame {
                     dialogPanel.revalidate();
                     createMainView();
                     try {
-                        networkClient = new NetworkClient();
-                        networkClient.setNickname(nickname);
+                        //networkClient = new NetworkClient();
+                        //networkClient.setNickname(nickname);
                         networkClient.connectToServer("localhost",1050 ); //TODO move params to networkClient config
                     } catch (Exception e1) {
                         e1.printStackTrace();
@@ -133,6 +133,7 @@ public class MyChatClient extends JFrame {
         panelInput.add(buttonSend, BorderLayout.EAST);
 
     }
+    */
 
     public static void main(String[] args) {
 

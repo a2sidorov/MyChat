@@ -2,11 +2,12 @@ package com.a2sidorov.mychat.controller;
 
 import com.a2sidorov.mychat.model.MainModel;
 import com.a2sidorov.mychat.model.Settings;
+import com.a2sidorov.mychat.network.NetworkClient;
 import com.a2sidorov.mychat.view.IntroView;
 import com.a2sidorov.mychat.view.MainView;
 
 import javax.swing.*;
-import java.awt.*;
+import java.io.IOException;
 
 public class IntroController {
 
@@ -27,30 +28,27 @@ public class IntroController {
     public void initController() {
         JFrame frame = introView.getFrame();
         introView.getConnectButton().addActionListener(e -> {
+
+            NetworkClient networkClient = new NetworkClient();
+
+            try {
+                networkClient.connectToServer(settings.getAddress(), settings.getPort());
+            } catch (IOException ex) {
+                settings.getNotification().error("Cannot connect to the chat server");
+                return;
+            }
+
             checkSettingsForChanges();
-
-
-
             frame.getContentPane().removeAll();
             frame.getContentPane().repaint();
-
 
             SwingUtilities.invokeLater(() -> {
                 MainModel mainModel = new MainModel();
                 MainView mainView = new MainView(frame);
-                //MainController mainController = new IntroController(mainModel, mainView);
-                //MainController.initView();
-                //MainController.initController();
+                MainController mainController = new MainController(mainModel, mainView);
+                networkClient.setMainController(mainController);
             });
-
-;
-
-
-
-
-
-                });
-
+        });
     }
 
     private void checkSettingsForChanges() {

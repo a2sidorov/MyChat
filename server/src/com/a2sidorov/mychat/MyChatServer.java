@@ -3,6 +3,8 @@ package com.a2sidorov.mychat;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -19,6 +21,8 @@ public class MyChatServer {
 
     private int port;
     private InetAddress address;
+
+
 
     private MyChatServer(Properties properties) {
         try {
@@ -40,10 +44,18 @@ public class MyChatServer {
 
     void start() {
 
-        BlockingQueue<SocketChannel> socketQueue = new ArrayBlockingQueue<>(1024);
+        BlockingQueue<SocketChannel> socketQueue = new ArrayBlockingQueue<>(64);
+        BlockingQueue<String> inboundPacketQueue = new ArrayBlockingQueue<String>(64);
+        BlockingQueue<String> outboundPacketQueue = new ArrayBlockingQueue<String>(64);
+        Map<String, String> nicknames = new HashMap<>();
 
         SocketAccepter socketAccepter = new SocketAccepter(this.address, this.port, socketQueue);
-        SocketProcessor socketProcessor = new SocketProcessor(socketQueue);
+
+        SocketProcessor socketProcessor = new SocketProcessor(
+                socketQueue,
+                inboundPacketQueue,
+                outboundPacketQueue,
+                nicknames);
 
         Thread accepterThread = new Thread(socketAccepter);
         Thread processorThread = new Thread(socketProcessor);

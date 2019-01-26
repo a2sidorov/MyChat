@@ -1,24 +1,26 @@
 package com.a2sidorov.mychat;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.Iterator;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
 class SocketWriter {
     private BlockingQueue<String> outboundPacketQueue;
-    private List<Client> clients;
+    private ByteBuffer writeBuffer;
+    private Map<String, String> nicknames;
 
-    SocketWriter(BlockingQueue<String> outboundPacketQueue, List<Client> clients) {
+    SocketWriter(BlockingQueue<String> outboundPacketQueue,
+                 ByteBuffer writeBuffer,
+                 Map<String, String> nicknames) {
         this.outboundPacketQueue = outboundPacketQueue;
-        this.clients = clients;
+        this.writeBuffer = writeBuffer;
+        this.nicknames = nicknames;
     }
 
-    void writeToSocket(SelectionKey key, ByteBuffer writeBuffer, String packet) throws IOException {
+    void writeToSocket(SelectionKey key, String packet) throws IOException {
         SocketChannel socketChannel = (SocketChannel) key.channel();
 
         byte[] packetBytes = packet.getBytes();
@@ -37,27 +39,13 @@ class SocketWriter {
 
         if (bytesWritten == -1) {
 
-            String nickname = "";
-
-            Iterator<Client> iter = clients.iterator();
-            while(iter.hasNext()) {
-                Client client = iter.next();
-                if (client.getSocketChannel() == socketChannel) {
-
-                    nickname = client.getNickname();
-                    iter.remove();
-                }
-            }
-
-            System.out.println(socketChannel + " has disconnected.");
+            String nickname = nicknames.remove(socketChannel.getRemoteAddress().toString());
             this.outboundPacketQueue.add("s/" + nickname + " has left the chat.");
 
             key.cancel();
             socketChannel.close();
             return;
         }
-
-
 
         writeBuffer.clear();
     }

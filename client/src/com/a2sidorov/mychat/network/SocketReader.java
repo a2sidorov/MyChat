@@ -12,9 +12,9 @@ class SocketReader implements Runnable {
     private ByteBuffer readBuffer;
     private MainController mainController;
 
-    SocketReader(SocketChannel socketChannel, MainController mainController) {
+    SocketReader(SocketChannel socketChannel, ByteBuffer readBuffer, MainController mainController) {
         this.socketChannel = socketChannel;
-        this.readBuffer = ByteBuffer.allocate(1024);
+        this.readBuffer = readBuffer;
         this.mainController = mainController;
     }
 
@@ -25,7 +25,7 @@ class SocketReader implements Runnable {
         }
     }
 
-    private void readFromSocket() {
+    void readFromSocket() {
         int bytesRead;
         try {
             bytesRead = socketChannel.read(this.readBuffer);
@@ -34,15 +34,15 @@ class SocketReader implements Runnable {
         }
 
         if (bytesRead == -1) {
-            System.out.println("End of stream");
+            mainController.updateTextArea("Server has closed the connection");
             return;
         }
 
-        readBuffer.flip();
-        readFullPackets(readBuffer);
+        this.readBuffer.flip();
+        processFullPackets();
     }
 
-    void readFullPackets(ByteBuffer readBuffer) {
+    void processFullPackets() {
 
         short packetSize;
         int bytesInBuffer;
@@ -51,19 +51,21 @@ class SocketReader implements Runnable {
             bytesInBuffer = readBuffer.limit() - readBuffer.position();
 
             if (bytesInBuffer == 1) { //return if the size of a packet(first two bytes) is not fully read
+                this.readBuffer.clear();
+                this.readBuffer.position(bytesInBuffer);
                 return;
             }
 
-            readBuffer.mark();
-            packetSize = readBuffer.getShort();
-            bytesInBuffer = readBuffer.limit() - readBuffer.position();
+            //readBuffer.mark();
+            packetSize = this.readBuffer.getShort();
 
-            if (packetSize <= bytesInBuffer) {
+            if (packetSize <= bytesInBuffer - 2) {
                 byte[] packetBytes = new byte[packetSize];
-                readBuffer.get(packetBytes);
+                this.readBuffer.get(packetBytes);
                 parsePacket(new String(packetBytes));
             } else {
-                readBuffer.reset();
+                this.readBuffer.clear();
+                this.readBuffer.position(bytesInBuffer);
                 return; //returns if a packet is not fully read
 
             }
@@ -92,7 +94,6 @@ class SocketReader implements Runnable {
             String[] nicknames = message.substring(3, message.length() - 1).split(",");
             mainController.updateListNicknames(nicknames);
         }
-
 
     }
 

@@ -34,7 +34,6 @@ public class MainView {
         /* Add UI elements to frame */
         JPanel mainPanel = new JPanel(new BorderLayout());
 
-
         //East
         mainPanel.add(listNicknames, BorderLayout.EAST);
 

@@ -1,5 +1,6 @@
 package com.a2sidorov.mychat.network;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
@@ -12,25 +13,52 @@ import static org.mockito.Mockito.*;
 @DisplayName("Testing SocketReader class")
 class SocketReaderTest {
 
-    private static SocketReader socketReader;
-    private static MainController mainController;
+    private static SocketChannel socketChannelMocked;
+    private static MainController mainControllerMocked;
     private static ByteBuffer readBuffer;
+
+    private static SocketReader socketReader;
+
 
     @BeforeAll
     static void initAll() {
-        SocketChannel socketChannel = mock(SocketChannel.class);
-        mainController = mock(MainController.class);
-        socketReader = new SocketReader(socketChannel, mainController);
+        socketChannelMocked = mock(SocketChannel.class);
+        mainControllerMocked = mock(MainController.class);
         readBuffer = ByteBuffer.allocate(1024);
+
+        socketReader = new SocketReader(socketChannelMocked, readBuffer, mainControllerMocked);
+    }
+
+
+    @Nested
+    @DisplayName("Testing readFromSocket")
+    class readFromSocketTest {
+
+        @DisplayName("when the connection has been closed then notify the user")
+        @Test
+        void readFromSocketTest1() throws IOException {
+            when(socketChannelMocked.read(readBuffer)).thenReturn(-1);
+            socketReader.readFromSocket();
+            verify(mainControllerMocked).updateTextArea("Server has closed the connection");
+        }
+
+        @DisplayName("when bytes are read then process full packets")
+        @Test
+        void readFromSocketTest2() throws IOException {
+            SocketReader socketReaderSpied = spy(socketReader);
+            when(socketChannelMocked.read(readBuffer)).thenReturn(5);
+            socketReaderSpied.readFromSocket();
+            verify(socketReaderSpied).processFullPackets();
+        }
     }
 
     @Nested
-    @DisplayName("Testing readFullPackets")
-    class readFullPacketsTest {
+    @DisplayName("Testing processFullPackets method")
+    class processFullPacketsTest {
 
         @DisplayName("when a full packet is read then call parsePacket with it")
         @Test
-        void readFullPacketTest1() {
+        void processFullPacketTest1() {
             SocketReader socketReaderSpied = spy(socketReader);
 
             String packet = "m/message";
@@ -39,29 +67,60 @@ class SocketReaderTest {
 
             readBuffer.flip();
 
-            socketReaderSpied.readFullPackets(readBuffer);
+            socketReaderSpied.processFullPackets();
+            readBuffer.clear();
             verify(socketReaderSpied).parsePacket(packet);
         }
 
-        @DisplayName("when a partial packet is read then skip parsing")
+        @DisplayName("when a partial packet is read then skip parsing until the packet is fully read")
         @Test
-        void readFullPacketTest2() {
+        void processFullPacketTest2() {
             SocketReader socketReaderSpied = spy(socketReader);
 
             String fullPacket = "m/message";
-            String parialPacket = "m/mess";
+            String parialPacketPart1 = "m/mess";
+            String parialPacketPart2 = "age";
             readBuffer.putShort((short) fullPacket.getBytes().length);
-            readBuffer.put(parialPacket.getBytes());
-
+            readBuffer.put(parialPacketPart1.getBytes());
             readBuffer.flip();
 
-            socketReaderSpied.readFullPackets(readBuffer);
-            verify(socketReaderSpied, never()).parsePacket(parialPacket);
+            socketReaderSpied.processFullPackets();
+            verify(socketReaderSpied, never()).parsePacket(anyString());
+
+
+            readBuffer.put(parialPacketPart2.getBytes());
+            readBuffer.flip();
+
+            socketReaderSpied.processFullPackets();
+            verify(socketReaderSpied).parsePacket(fullPacket);
         }
 
+        @DisplayName("when the partial size  of a pcket is read then skip parsing until the packet is fully read")
+        @Test
+        void processFullPacketTest3() {
+            SocketReader socketReaderSpied = spy(socketReader);
+
+            String fullPacket = "m/message";
+            readBuffer.put((byte) 0);
+            readBuffer.flip();
+
+            socketReaderSpied.processFullPackets();
+            verify(socketReaderSpied, never()).parsePacket(anyString());
+
+
+            readBuffer.put((byte) fullPacket.getBytes().length);
+            readBuffer.flip();
+
+            socketReaderSpied.processFullPackets();
+            verify(socketReaderSpied, never()).parsePacket(fullPacket);
+
+            readBuffer.put(fullPacket.getBytes());
+            readBuffer.flip();
+
+            socketReaderSpied.processFullPackets();
+            verify(socketReaderSpied).parsePacket(fullPacket);
+        }
     }
-
-
 
     @Nested
     @DisplayName("Testing parsePacket method")
@@ -73,7 +132,7 @@ class SocketReaderTest {
             String packet = "m/user message";
 
             socketReader.parsePacket(packet);
-            verify(mainController).updateTextArea("user message");
+            verify(mainControllerMocked).updateTextArea("user message");
         }
 
         @DisplayName("when packet is a server message then update the text area")
@@ -82,7 +141,7 @@ class SocketReaderTest {
             String packet = "s/server message";
 
             socketReader.parsePacket(packet);
-            verify(mainController).updateTextArea("server message");
+            verify(mainControllerMocked).updateTextArea("server message");
         }
 
         @DisplayName("when packet is a nickname list then update the user list")
@@ -92,7 +151,12 @@ class SocketReaderTest {
             String[] nicknames = packet.substring(3, packet.length() - 1).split(",");
 
             socketReader.parsePacket(packet);
-            verify(mainController).updateListNicknames(nicknames);
+            verify(mainControllerMocked).updateListNicknames(nicknames);
         }
+    }
+
+    @AfterEach
+    void tearDown() {
+        readBuffer.clear();
     }
 }

@@ -5,16 +5,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.stream.Collectors;
 
-public class SocketProcessor implements Runnable {
+class SocketProcessor implements Runnable {
     private BlockingQueue<SocketChannel> socketQueue;
-    private List<Client> clients;
+    private Map<String, String> nicknames;
 
     private BlockingQueue<String> inboundPacketQueue;
     private BlockingQueue<String> outboundPacketQueue;
@@ -30,12 +28,15 @@ public class SocketProcessor implements Runnable {
 
     private PacketParser packetParser;
 
-    SocketProcessor(BlockingQueue<SocketChannel> socketQueue) {
+    SocketProcessor(BlockingQueue<SocketChannel> socketQueue,
+                    BlockingQueue<String> inboundPacketQueue,
+                    BlockingQueue<String> outboundPacketQueue,
+                    Map<String, String> nicknames) {
         this.socketQueue = socketQueue;
-        this.clients = new LinkedList<>();
+        this.nicknames = nicknames;
 
-        this.inboundPacketQueue = new ArrayBlockingQueue<String>(64);
-        this.outboundPacketQueue  = new ArrayBlockingQueue<String>(64);
+        this.inboundPacketQueue = inboundPacketQueue;
+        this.outboundPacketQueue  = outboundPacketQueue;
 
         this.readBuffer = ByteBuffer.allocate(1024);
         this.writeBuffer = ByteBuffer.allocate(1024);
@@ -48,9 +49,14 @@ public class SocketProcessor implements Runnable {
             e.printStackTrace();
         }
 
-        this.socketReader = new SocketReader(this.inboundPacketQueue);
-        this.packetParser = new PacketParser(this.inboundPacketQueue, this.outboundPacketQueue, this.clients);
-        this.socketWriter = new SocketWriter(this.outboundPacketQueue, this.clients);
+        this.socketReader = new SocketReader(
+                this.inboundPacketQueue,
+                this.readBuffer);
+
+        this.socketWriter = new SocketWriter(
+                this.outboundPacketQueue,
+                this.readBuffer,
+                this.nicknames);
     }
 
     public void run() {
@@ -58,7 +64,7 @@ public class SocketProcessor implements Runnable {
             try {
                 register();
                 readFromSockets();
-                packetParser.parse();
+                parsePackets();
                 writeToSockets();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -76,7 +82,8 @@ public class SocketProcessor implements Runnable {
         SocketChannel socketChannel = this.socketQueue.poll();
 
         while (socketChannel != null) {
-            clients.add(new Client(socketChannel));
+            //clients.add(new Client(socketChannel));
+            nicknames.put(socketChannel.getRemoteAddress().toString(), "Uknown");
             socketChannel.configureBlocking(false);
             socketChannel.register(this.readSelector, SelectionKey.OP_READ);
             socketChannel.register(this.writeSelector, SelectionKey.OP_WRITE);
@@ -93,7 +100,7 @@ public class SocketProcessor implements Runnable {
 
             while(keyIterator.hasNext()) {
                 SelectionKey key = keyIterator.next();
-                socketReader.readFromSocket(key, this.readBuffer);
+                socketReader.readFromSocket(key);
                 keyIterator.remove();
             }
             selectedKeys.clear();
@@ -113,7 +120,7 @@ public class SocketProcessor implements Runnable {
 
                 while(keyIterator.hasNext()){
                     SelectionKey key = keyIterator.next();
-                    socketWriter.writeToSocket(key, this.writeBuffer, packet);
+                    socketWriter.writeToSocket(key, packet);
                     keyIterator.remove();
                 }
 
@@ -121,6 +128,46 @@ public class SocketProcessor implements Runnable {
             }
             packet = outboundPacketQueue.poll();
         }
+    }
+
+    void parsePackets() {
+        /*
+        Inbound packet prefixes:
+        m/ - user message (ex: "m/Nickname: message");
+        n/ - nickname (ex: "n/127.0.0.1/nickname");
+
+        Outbound packet prefixes:
+        s/ - server notification (ex: "s/notification");
+        n/ - nickname list (ex: "n/[nickname1, nickname2]");
+        */
+
+        String inboundPacket = this.inboundPacketQueue.poll();
+
+        while (inboundPacket != null) {
+            String prefix = inboundPacket.substring(0, 2);
+
+            if (prefix.equals("n/")) {
+                int i = inboundPacket.lastIndexOf('/');
+                String address = inboundPacket.substring(2, i);
+                String nickname = inboundPacket.substring(i + 1);
+
+                nicknames.replace(address, nickname);
+
+                List<String> list = nicknames.entrySet()
+                        .stream()
+                        .map(e -> e.getValue())
+                        .collect(Collectors.toList());
+
+                outboundPacketQueue.add("s/" + nickname + " has joined the chat.");
+                outboundPacketQueue.add("n/" + list);
+            }
+
+            if (prefix.equals("m/")) {
+                outboundPacketQueue.add(inboundPacket);
+            }
+            inboundPacket = inboundPacketQueue.poll();
+        }
+
     }
 
 

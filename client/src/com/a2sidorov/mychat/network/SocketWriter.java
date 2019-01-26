@@ -1,67 +1,65 @@
 package com.a2sidorov.mychat.network;
 
+import com.a2sidorov.mychat.controller.MainController;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
-public class SocketWriter implements Runnable {
+class SocketWriter implements Runnable {
 
-    private SocketChannel channel;
-    private BlockingQueue<String> packetsQueue;
-    private ByteBuffer buffer;
+    private SocketChannel socketChannel;
+    private ByteBuffer writeBuffer;
+    private BlockingQueue<String> packetQueue;
+    private MainController mainController;
 
-    SocketWriter(SocketChannel channel) {
-        this.channel = channel;
-        this.packetsQueue = new ArrayBlockingQueue<>(32);
-        buffer = ByteBuffer.allocate(1024);
+    SocketWriter(SocketChannel socketChannel,
+                 ByteBuffer writeBuffer,
+                 BlockingQueue<String> packetQueue,
+                 MainController mainController) {
+        this.socketChannel = socketChannel;
+        this.writeBuffer = writeBuffer;
+        this.packetQueue = packetQueue;
+        this.mainController = mainController;
     }
 
     @Override
     public void run() {
-        String packet = "";
-        int bytesWriten = 0;
-        byte[] bytesToWrite;
-        int packetSize;
-        while(true) {
+        while (true) {
             System.out.println("writing loop");
-            try {
-                packet = packetsQueue.take();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            bytesToWrite = packet.getBytes();
-            packetSize = bytesToWrite.length;
-
-            buffer.putInt(packetSize);
-            buffer.put(bytesToWrite);
-            packetSize = buffer.position();
-            buffer.flip();
-            try {
-                bytesWriten = channel.write(buffer);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            if (2 + packetSize == bytesWriten) { // 4 bytes added for int value
-                buffer.clear();
-            } else {
-                buffer.compact();
-            }
-
+            writeToSocket();
         }
-
     }
 
-    public void add(String message) {
-        String packet = "/m/" + message;
+    void writeToSocket() {
+
+        String packet = "";
         try {
-            packetsQueue.put(packet);
+            packet = this.packetQueue.take();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+
+        writeBuffer.putShort((short) packet.getBytes().length);
+        writeBuffer.put(packet.getBytes());
+        writeBuffer.flip();
+
+        int bytesWritten = 0;
+        try {
+            while(writeBuffer.hasRemaining() && bytesWritten != -1) {
+                bytesWritten = socketChannel.write(writeBuffer);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (bytesWritten == -1) {
+            mainController.updateTextArea("Server has closed the connection");
+        }
+        writeBuffer.clear();
+
     }
+
 }

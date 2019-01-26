@@ -9,8 +9,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -18,8 +16,6 @@ import java.util.concurrent.BlockingQueue;
 class SocketReaderTest {
 
     private static BlockingQueue<String> inboundPacketQueue;
-    private static BlockingQueue<String> outboundPacketQueue;
-    private static List<Client> clients;
 
     private static ByteBuffer readBuffer;
     private static SocketReader socketReader;
@@ -32,17 +28,20 @@ class SocketReaderTest {
     @BeforeAll
     static void initAll() {
         inboundPacketQueue = new ArrayBlockingQueue<>(256);
-        socketReader = new SocketReader(inboundPacketQueue);
         readBuffer = ByteBuffer.allocate(1024);
+        socketReader = new SocketReader(inboundPacketQueue, readBuffer);
 
-        packetFull = "m/message";
+
+        packetFull = "m/Nickname: message";
         packetBytesFull = new byte[2 + packetFull.getBytes().length];
         packetBytesFull[1] = (byte) packetFull.getBytes().length;
         System.arraycopy(packetFull.getBytes(),0, packetBytesFull,2, packetFull.getBytes().length);
 
         packetBytesPart1 = Arrays.copyOfRange(packetBytesFull, 0, 6);
         packetBytesPart2 = Arrays.copyOfRange(packetBytesFull, 6, packetBytesFull.length);
+
     }
+
 
     @Nested
     @DisplayName("Testing readFromSocket method")
@@ -66,7 +65,7 @@ class SocketReaderTest {
                 return null;
             });
 
-            socketReader.readFromSocket(key, readBuffer);
+            socketReader.readFromSocket(key);
 
             assertTrue(Arrays.equals(packetBytesPart1, (byte[]) key.attachment()));
         }
@@ -85,7 +84,7 @@ class SocketReaderTest {
             when(key.channel()).thenReturn(socketChannel);
             when(key.attachment()).thenReturn(packetBytesPart1);
 
-            socketReader.readFromSocket(key, readBuffer);
+            socketReader.readFromSocket(key);
 
             assertEquals(packetFull, inboundPacketQueue.poll());
         }
@@ -101,12 +100,13 @@ class SocketReaderTest {
             when(key.channel()).thenReturn(socketChannel);
             when(key.attachment()).thenReturn(null);
 
-            socketReader.readFromSocket(key, readBuffer);
+            socketReader.readFromSocket(key);
 
             verify(key).cancel();
             verify(socketChannel).close();
         }
     }
+
 
     @Nested
     @DisplayName("Testing readFullPackets method")
@@ -114,13 +114,13 @@ class SocketReaderTest {
         @DisplayName("when one full packet then add it to the queue")
         @Test
         void readFullPacketsTest1() {
-            String packet = "m/message";
+            String packet = "m/Nickname: message";
             byte[] packetBytes = packet.getBytes();
             readBuffer.putShort((short) packetBytes.length);
             readBuffer.put(packetBytes);
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer);
+            socketReader.readFullPackets();
             readBuffer.clear();
             assertEquals(packet, inboundPacketQueue.poll());
         }
@@ -129,7 +129,7 @@ class SocketReaderTest {
         @DisplayName("when two full packets then add them to the queue")
         @Test
         void readFullPacketsTest2() {
-            String packet1 = "m/message1";
+            String packet1 = "m/Nickname: message1";
             byte[] packet1Bytes = packet1.getBytes();
             readBuffer.putShort((short) packet1Bytes.length);
             readBuffer.put(packet1Bytes);
@@ -140,7 +140,7 @@ class SocketReaderTest {
             readBuffer.put(packet2Bytes);
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer);
+            socketReader.readFullPackets();
             readBuffer.clear();
             assertEquals(packet1, inboundPacketQueue.poll());
             assertEquals(packet2, inboundPacketQueue.poll());
@@ -149,19 +149,19 @@ class SocketReaderTest {
         @DisplayName("when one and a half packets then add one to the queue")
         @Test
         void readFullPacketsTest3() {
-            String packet1 = "m/message1";
+            String packet1 = "m/Nickname: message1";
             byte[] packet1Bytes = packet1.getBytes();
             readBuffer.putShort((short) packet1Bytes.length);
             readBuffer.put(packet1Bytes);
 
-            String packet2 = "m/message2";
+            String packet2 = "m/Nickname: message2";
             byte[] bytes2 = packet2.getBytes();
             byte[] firstPart = "m/me".getBytes();
             readBuffer.putShort((short) bytes2.length);
             readBuffer.put(firstPart);
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer); //processing the first part
+            socketReader.readFullPackets(); //processing the first part
             readBuffer.clear();
             assertEquals(packet1, inboundPacketQueue.poll());
             assertNull(inboundPacketQueue.poll());
@@ -174,7 +174,7 @@ class SocketReaderTest {
             readBuffer.put((byte) 0);
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer);
+            socketReader.readFullPackets();
             readBuffer.clear();
             assertNull(inboundPacketQueue.poll());
         }
@@ -182,12 +182,12 @@ class SocketReaderTest {
         @DisplayName("when a partial packet then add nothing to the queue")
         @Test
         void readFullPacketsTest5() {
-            String packet = "m/message";
+            String packet = "m/Nickname: message";
             byte[] bytes = packet.getBytes();
             readBuffer.putShort((short) bytes.length);
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer); //processing the first part
+            socketReader.readFullPackets(); //processing the first part
             readBuffer.clear();
             assertNull(inboundPacketQueue.poll());
         }
@@ -196,7 +196,7 @@ class SocketReaderTest {
         @Test
         void readFullPacketsTest6() {
 
-            String packet1 = "m/message1";
+            String packet1 = "m/Nickname: message1";
             byte[] bytes1 = packet1.getBytes();
             readBuffer.putShort((short) bytes1.length);
             readBuffer.put(bytes1);
@@ -204,7 +204,7 @@ class SocketReaderTest {
             readBuffer.put((byte) 0);
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer);
+            socketReader.readFullPackets();
             readBuffer.clear();
             assertEquals(packet1, inboundPacketQueue.poll());
             assertNull(inboundPacketQueue.poll());
@@ -214,17 +214,17 @@ class SocketReaderTest {
         @Test
         void readFullPacketsTest7() {
 
-            String packet1 = "m/message1";
+            String packet1 = "m/Nickname: message1";
             byte[] bytes1 = packet1.getBytes();
             readBuffer.putShort((short) bytes1.length);
             readBuffer.put(bytes1);
 
-            String packet2 = "m/message2";
+            String packet2 = "m/Nickname: message2";
             byte[] bytes2 = packet2.getBytes();
             readBuffer.putShort((short) bytes2.length);
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer); //processing the first part
+            socketReader.readFullPackets(); //processing the first part
             readBuffer.clear();
             assertEquals(packet1, inboundPacketQueue.poll());
             assertNull(inboundPacketQueue.poll());
@@ -234,12 +234,12 @@ class SocketReaderTest {
         @Test
         void readFullPacketsTest8() {
 
-            String packet1 = "m/message1";
+            String packet1 = "m/Nickname: message1";
             byte[] packet1Bytes = packet1.getBytes();
             readBuffer.putShort((short) packet1Bytes.length);
             readBuffer.put(packet1Bytes);
 
-            String packet2 = "m/message2";
+            String packet2 = "m/Nickname: message2";
             byte[] packet2Bytes = packet2.getBytes();
             byte[] packet2BytesPart1 = Arrays.copyOfRange(packet2Bytes, 0, packet2Bytes.length - 1);
             byte[] packet2BytesPart2 = Arrays.copyOfRange(packet2Bytes, packet2Bytes.length - 1, packet2Bytes.length);
@@ -248,7 +248,7 @@ class SocketReaderTest {
             readBuffer.put(packet2BytesPart1);
 
             readBuffer.flip();
-            socketReader.readFullPackets(readBuffer); //processing the first part
+            socketReader.readFullPackets(); //processing the first part
             readBuffer.clear();
 
             assertEquals(packet1, inboundPacketQueue.poll());
