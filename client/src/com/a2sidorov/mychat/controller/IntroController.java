@@ -10,11 +10,13 @@ public class IntroController {
 
     private Settings settings;
     private IntroView introView;
+    private NetworkClient networkClient;
     private MainController mainController;
 
-    public IntroController(Settings settings, IntroView introView) {
+    public IntroController(Settings settings, IntroView introView, NetworkClient networkClient) {
         this.settings = settings;
         this.introView = introView;
+        this.networkClient = networkClient;
     }
 
     public void initView() {
@@ -28,7 +30,6 @@ public class IntroController {
         introView.getConnectButton().addActionListener(e -> {
             checkSettingsForChanges();
 
-            NetworkClient networkClient = new NetworkClient();
             try {
                 networkClient.connectToServer(this.settings.getAddress(), this.settings.getPort());
                 networkClient.sendNickname(settings.getNickname());
@@ -38,7 +39,6 @@ public class IntroController {
             }
             mainController.display();
             mainController.initController();
-            mainController.setNetworkClient(networkClient);
         });
     }
 

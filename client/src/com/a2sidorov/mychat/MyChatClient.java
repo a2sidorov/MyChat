@@ -3,6 +3,7 @@ package com.a2sidorov.mychat;
 import com.a2sidorov.mychat.controller.IntroController;
 import com.a2sidorov.mychat.controller.MainController;
 import com.a2sidorov.mychat.model.Settings;
+import com.a2sidorov.mychat.network.NetworkClient;
 import com.a2sidorov.mychat.view.IntroView;
 import com.a2sidorov.mychat.view.MainView;
 import com.a2sidorov.mychat.view.Notification;
@@ -34,14 +35,17 @@ public class MyChatClient {
             JFrame frame = initFrame();
             Notification notification = new Notification();
 
-            // Intro MVC
+            //Initializing network client
+            NetworkClient networkClient = new NetworkClient();
+
+            // Initializing Intro MVC
             Settings settings = new Settings(notification);
             IntroView introView = new IntroView(frame);
-            IntroController introController = new IntroController(settings, introView);
+            IntroController introController = new IntroController(settings, introView, networkClient);
 
-            // Main MVC
+            // Initializing Main MVC
             MainView mainView = new MainView(frame);
-            MainController mainController = new MainController(settings, mainView);
+            MainController mainController = new MainController(settings, mainView, networkClient);
 
             // Giving controllers access to each other for transitions between views
             introController.setMainController(mainController);

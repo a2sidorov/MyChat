@@ -24,7 +24,7 @@ class SocketAccepter implements Runnable {
         try {
             this.serverSocketChannel = ServerSocketChannel.open();
             this.serverSocketChannel.bind(new InetSocketAddress(address, port));
-            System.out.println("Listening for connections ...");
+            System.out.println("MyChat server is running on " + serverSocketChannel.getLocalAddress() + ".");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -33,7 +33,7 @@ class SocketAccepter implements Runnable {
             try {
 
                 SocketChannel socketChannel = this.serverSocketChannel.accept();
-                System.out.println(socketChannel + " has connected.");
+                System.out.println(socketChannel.getRemoteAddress() + " has connected.");
                 this.socketQueue.add(socketChannel);
             } catch (IOException e) {
                 e.printStackTrace();

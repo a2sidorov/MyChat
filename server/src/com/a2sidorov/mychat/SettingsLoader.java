@@ -15,7 +15,7 @@ class SettingsLoader {
 
     SettingsLoader() {
         String rootPath = System.getProperty("user.dir");
-        configPath = rootPath + "/.mcserverconfig";
+        configPath = rootPath + "/mychatserver.properties";
 
         properties = new Properties();
 

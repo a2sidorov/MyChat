@@ -54,7 +54,7 @@ class SocketReader {
 
             this.outboundPacketQueue.add("n/" + list);
 
-            System.out.println(socketChannel + " has disconnected.");
+            System.out.println(socketChannel.getRemoteAddress() + " has disconnected.");
             key.cancel();
             socketChannel.close();
             return;

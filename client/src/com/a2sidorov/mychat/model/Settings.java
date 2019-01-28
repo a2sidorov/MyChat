@@ -18,7 +18,7 @@ public class Settings {
 
     public Settings(Notification notification) {
         String rootPath = System.getProperty("user.dir");
-        this.settingsPath = rootPath + "/.mcclientconfig";
+        this.settingsPath = rootPath + "/mychatclient.properties";
         this.properties = new Properties();
         load(properties);
         this.address = properties.getProperty("address");

@@ -6,7 +6,6 @@ import com.a2sidorov.mychat.view.MainView;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.concurrent.BlockingQueue;
 
 public class MainController {
@@ -16,9 +15,10 @@ public class MainController {
     private NetworkClient networkClient;
     private IntroController introController;
 
-    public MainController(Settings settings, MainView mainView) {
+    public MainController(Settings settings, MainView mainView, NetworkClient networkClient) {
         this.settings = settings;
         this.mainView = mainView;
+        this.networkClient = networkClient;
     }
 
     public void display() {
@@ -87,7 +87,4 @@ public class MainController {
         this.introController = introController;
     }
 
-    public void setNetworkClient(NetworkClient networkClient) {
-        this.networkClient = networkClient;
-    }
 }
