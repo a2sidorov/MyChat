@@ -28,7 +28,10 @@ public class IntroController {
 
     public void initController() {
         introView.getConnectButton().addActionListener(e -> {
-            checkSettingsForChanges();
+            if (!areSettingsValid()) {
+                return;
+            }
+            settings.updateConfigFile();
 
             try {
                 networkClient.connectToServer(this.settings.getAddress(), this.settings.getPort());
@@ -42,34 +45,26 @@ public class IntroController {
         });
     }
 
-    private void checkSettingsForChanges() {
-        boolean areSettingsChanged = false;
+    private boolean areSettingsValid() {
 
-        //checking if the address was changed
         String newAddress = introView.getTextFieldAddress().getText().trim();
-        if (!this.settings.getAddress().equals(newAddress)) {
-            areSettingsChanged = true;
-            this.settings.setAddress(newAddress);
+        if (!this.settings.setAddress(newAddress)) {
+            return false;
         }
 
-        //checking if the address was changed
         String newPort = introView.getTextFieldPort().getText().trim();
-        if (!this.settings.getPort().equals(newPort)) {
-            areSettingsChanged = true;
-            this.settings.setPort(newPort);
+        if (!this.settings.setPort(newPort)) {
+            return false;
         }
 
-        //checking if the address was changed
         String newNickname = introView.getTextFieldNickname().getText().trim();
-        if (!this.settings.getNickname().equals(newNickname)) {
-            areSettingsChanged = true;
-            this.settings.setNickname(newNickname);
+        if (!this.settings.setNickname(newNickname)) {
+            return false;
         }
-
-        if (areSettingsChanged) {
-            this.settings.updateConfigFile();
-        }
+        return true;
     }
+
+
 
     public void setMainController(MainController mainController) {
         this.mainController = mainController;

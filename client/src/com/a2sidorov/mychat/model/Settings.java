@@ -65,33 +65,40 @@ public class Settings {
         return port;
     }
 
-    public void setAddress(String address) {
+    public boolean setAddress(String address) {
         if (InputValidation.isAddressValid(address)) {
             this.address = address;
+            return true;
         } else {
             notification.error("Invalid IP address");
+            return false;
         }
     }
 
-    public void setPort(String port) {
+    public boolean setPort(String port) {
         if (InputValidation.isPortValid(port)) {
             int num = Integer.parseInt(port);
 
             if (num > 1023 && num < 65535) {
                 this.port = port;
+                return true;
             } else {
                 notification.error("The port number must be between 1023 and 65535");
+                return false;
             }
         } else {
             notification.error("Invalid port address");
+            return false;
         }
     }
 
-    public void setNickname(String nickname) {
+    public boolean setNickname(String nickname) {
         if (InputValidation.isNicknameValid(nickname)) {
             this.nickname = nickname;
+            return true;
         } else {
             notification.error("Invalid nickname");
+            return false;
         }
     }
 
