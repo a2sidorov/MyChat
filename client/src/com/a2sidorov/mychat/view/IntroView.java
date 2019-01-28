@@ -2,11 +2,9 @@ package com.a2sidorov.mychat.view;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Properties;
 
 public class IntroView {
 
-    private JFrame frame;
     private JLabel labelAddress;
     private JLabel labelPort;
     private JLabel labelNickname;
@@ -15,16 +13,12 @@ public class IntroView {
     private JTextField textFieldNickname;
     private JButton connectButton;
 
+    private JPanel panelForm;
+    private JFrame frame;
 
+    public IntroView(JFrame frame) {
 
-    public IntroView() {
-        frame = new JFrame();
-        frame.setTitle("MyChat");
-        frame.setSize(600,500);
-        frame.setLocationRelativeTo(null);
-        frame.setResizable(false);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
+        this.frame = frame;
 
         /* Create UI emements */
         labelAddress = new JLabel("IP Address: ");
@@ -36,7 +30,7 @@ public class IntroView {
         connectButton = new JButton("Connect");
 
         /* Add UI elements to frame */
-        JPanel panelForm = new JPanel(new GridBagLayout());
+        panelForm = new JPanel(new GridBagLayout());
         Dimension dimension = new Dimension(300, 200);
         panelForm.setPreferredSize(dimension);
         panelForm.setMaximumSize(dimension);
@@ -78,22 +72,20 @@ public class IntroView {
         c.gridwidth = 1;
         c.insets = new Insets(20,0,0,0);
         panelForm.add(connectButton, c);
-
-        frame.getContentPane().add(panelForm);
-        frame.setVisible(true);
     }
 
-    public JFrame getFrame() {
-        return frame;
+    public void display() {
+        JPanel contentPane = (JPanel) this.frame.getContentPane();
+        contentPane.removeAll();
+        contentPane.repaint();
+        contentPane.add(panelForm);
+        frame.setVisible(true);
     }
 
     public JTextField getTextFieldAddress() {
         return textFieldAddress;
     }
 
-    public JButton getConnectButton() {
-        return connectButton;
-    }
 
     public JTextField getTextFieldPort() {
         return textFieldPort;
@@ -101,6 +93,10 @@ public class IntroView {
 
     public JTextField getTextFieldNickname() {
         return textFieldNickname;
+    }
+
+    public JButton getConnectButton() {
+        return connectButton;
     }
 
     public void setTextFieldAddress(JTextField textFieldAddress) {

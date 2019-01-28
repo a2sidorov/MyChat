@@ -5,10 +5,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -16,8 +19,10 @@ import java.util.concurrent.BlockingQueue;
 class SocketReaderTest {
 
     private static BlockingQueue<String> inboundPacketQueue;
-
+    private static BlockingQueue<String> outboundPacketQueue;
     private static ByteBuffer readBuffer;
+    private static Map<String, String> nicknames;
+
     private static SocketReader socketReader;
 
     private static String packetFull;
@@ -27,9 +32,11 @@ class SocketReaderTest {
 
     @BeforeAll
     static void initAll() {
-        inboundPacketQueue = new ArrayBlockingQueue<>(256);
+        inboundPacketQueue = new ArrayBlockingQueue<>(64);
+        outboundPacketQueue = new ArrayBlockingQueue<>(64);
         readBuffer = ByteBuffer.allocate(1024);
-        socketReader = new SocketReader(inboundPacketQueue, readBuffer);
+        nicknames = new HashMap<>();
+        socketReader = new SocketReader(inboundPacketQueue, outboundPacketQueue, readBuffer, nicknames);
 
 
         packetFull = "m/Nickname: message";
@@ -93,8 +100,14 @@ class SocketReaderTest {
         @Test
         void readFromSocketTest3() throws IOException {
 
+            nicknames.put("/127.0.0.1", "Unknown");
+
+            SocketAddress socketAddressMocked = mock(SocketAddress.class);
+            when(socketAddressMocked.toString()).thenReturn("/127.0.0.1");
+
             SocketChannel socketChannel = mock(SocketChannel.class);
             when(socketChannel.read(readBuffer)).thenReturn(-1);
+            when(socketChannel.getRemoteAddress()).thenReturn(socketAddressMocked);
 
             SelectionKey key = mock(SelectionKey.class);
             when(key.channel()).thenReturn(socketChannel);
@@ -109,18 +122,18 @@ class SocketReaderTest {
 
 
     @Nested
-    @DisplayName("Testing readFullPackets method")
-    class readFullPacketsTest {
+    @DisplayName("Testing processFullPackets method")
+    class processFullPacketsTest {
         @DisplayName("when one full packet then add it to the queue")
         @Test
-        void readFullPacketsTest1() {
+        void processFullPacketsTest1() {
             String packet = "m/Nickname: message";
             byte[] packetBytes = packet.getBytes();
             readBuffer.putShort((short) packetBytes.length);
             readBuffer.put(packetBytes);
 
             readBuffer.flip();
-            socketReader.readFullPackets();
+            socketReader.processFullPackets();
             readBuffer.clear();
             assertEquals(packet, inboundPacketQueue.poll());
         }
@@ -140,7 +153,7 @@ class SocketReaderTest {
             readBuffer.put(packet2Bytes);
 
             readBuffer.flip();
-            socketReader.readFullPackets();
+            socketReader.processFullPackets();
             readBuffer.clear();
             assertEquals(packet1, inboundPacketQueue.poll());
             assertEquals(packet2, inboundPacketQueue.poll());
@@ -161,7 +174,7 @@ class SocketReaderTest {
             readBuffer.put(firstPart);
 
             readBuffer.flip();
-            socketReader.readFullPackets(); //processing the first part
+            socketReader.processFullPackets(); //processing the first part
             readBuffer.clear();
             assertEquals(packet1, inboundPacketQueue.poll());
             assertNull(inboundPacketQueue.poll());
@@ -174,7 +187,7 @@ class SocketReaderTest {
             readBuffer.put((byte) 0);
 
             readBuffer.flip();
-            socketReader.readFullPackets();
+            socketReader.processFullPackets();
             readBuffer.clear();
             assertNull(inboundPacketQueue.poll());
         }
@@ -187,7 +200,7 @@ class SocketReaderTest {
             readBuffer.putShort((short) bytes.length);
 
             readBuffer.flip();
-            socketReader.readFullPackets(); //processing the first part
+            socketReader.processFullPackets(); //processing the first part
             readBuffer.clear();
             assertNull(inboundPacketQueue.poll());
         }
@@ -204,7 +217,7 @@ class SocketReaderTest {
             readBuffer.put((byte) 0);
 
             readBuffer.flip();
-            socketReader.readFullPackets();
+            socketReader.processFullPackets();
             readBuffer.clear();
             assertEquals(packet1, inboundPacketQueue.poll());
             assertNull(inboundPacketQueue.poll());
@@ -224,7 +237,7 @@ class SocketReaderTest {
             readBuffer.putShort((short) bytes2.length);
 
             readBuffer.flip();
-            socketReader.readFullPackets(); //processing the first part
+            socketReader.processFullPackets(); //processing the first part
             readBuffer.clear();
             assertEquals(packet1, inboundPacketQueue.poll());
             assertNull(inboundPacketQueue.poll());
@@ -248,7 +261,7 @@ class SocketReaderTest {
             readBuffer.put(packet2BytesPart1);
 
             readBuffer.flip();
-            socketReader.readFullPackets(); //processing the first part
+            socketReader.processFullPackets(); //processing the first part
             readBuffer.clear();
 
             assertEquals(packet1, inboundPacketQueue.poll());

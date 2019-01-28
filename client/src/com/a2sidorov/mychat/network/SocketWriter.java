@@ -1,7 +1,5 @@
 package com.a2sidorov.mychat.network;
 
-import com.a2sidorov.mychat.controller.MainController;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -11,36 +9,33 @@ class SocketWriter implements Runnable {
 
     private SocketChannel socketChannel;
     private ByteBuffer writeBuffer;
-    private BlockingQueue<String> packetQueue;
-    private MainController mainController;
+    private BlockingQueue<String> inboundPacketQueue;
+    private BlockingQueue<String> outboundPacketQueue;
 
     SocketWriter(SocketChannel socketChannel,
                  ByteBuffer writeBuffer,
-                 BlockingQueue<String> packetQueue,
-                 MainController mainController) {
+                 BlockingQueue<String> inboundPacketQueue,
+                 BlockingQueue<String> outboundPacketQueue) {
         this.socketChannel = socketChannel;
         this.writeBuffer = writeBuffer;
-        this.packetQueue = packetQueue;
-        this.mainController = mainController;
+        this.inboundPacketQueue = inboundPacketQueue;
+        this.outboundPacketQueue = outboundPacketQueue;
     }
 
     @Override
     public void run() {
         while (true) {
-            System.out.println("writing loop");
             writeToSocket();
         }
     }
 
     void writeToSocket() {
-
         String packet = "";
         try {
-            packet = this.packetQueue.take();
+            packet = this.outboundPacketQueue.take();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
 
         writeBuffer.putShort((short) packet.getBytes().length);
         writeBuffer.put(packet.getBytes());
@@ -56,10 +51,15 @@ class SocketWriter implements Runnable {
         }
 
         if (bytesWritten == -1) {
-            mainController.updateTextArea("Server has closed the connection");
+            try {
+                socketChannel.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            inboundPacketQueue.add("c/");
+            return;
         }
         writeBuffer.clear();
-
     }
 
 }

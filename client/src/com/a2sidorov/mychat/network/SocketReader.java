@@ -1,21 +1,22 @@
 package com.a2sidorov.mychat.network;
 
-import com.a2sidorov.mychat.controller.MainController;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.BlockingQueue;
 
 class SocketReader implements Runnable {
 
     private SocketChannel socketChannel;
     private ByteBuffer readBuffer;
-    private MainController mainController;
+    private BlockingQueue<String> inboundPacketQueue;
 
-    SocketReader(SocketChannel socketChannel, ByteBuffer readBuffer, MainController mainController) {
+    SocketReader(SocketChannel socketChannel,
+                 ByteBuffer readBuffer,
+                 BlockingQueue<String> inboundPacketQueue) {
         this.socketChannel = socketChannel;
         this.readBuffer = readBuffer;
-        this.mainController = mainController;
+        this.inboundPacketQueue = inboundPacketQueue;
     }
 
     @Override
@@ -26,75 +27,51 @@ class SocketReader implements Runnable {
     }
 
     void readFromSocket() {
-        int bytesRead;
-        try {
-            bytesRead = socketChannel.read(this.readBuffer);
-        } catch (IOException e) {
-            return;
-        }
-
-        if (bytesRead == -1) {
-            mainController.updateTextArea("Server has closed the connection");
-            return;
-        }
-
-        this.readBuffer.flip();
-        processFullPackets();
-    }
-
-    void processFullPackets() {
-
-        short packetSize;
-        int bytesInBuffer;
-
-        while (readBuffer.hasRemaining()) {
-            bytesInBuffer = readBuffer.limit() - readBuffer.position();
-
-            if (bytesInBuffer == 1) { //return if the size of a packet(first two bytes) is not fully read
-                this.readBuffer.clear();
-                this.readBuffer.position(bytesInBuffer);
+            int bytesRead;
+            try {
+                bytesRead = this.socketChannel.read(this.readBuffer);
+            } catch (IOException e) {
                 return;
             }
 
-            //readBuffer.mark();
-            packetSize = this.readBuffer.getShort();
-
-            if (packetSize <= bytesInBuffer - 2) {
-                byte[] packetBytes = new byte[packetSize];
-                this.readBuffer.get(packetBytes);
-                parsePacket(new String(packetBytes));
-            } else {
-                this.readBuffer.clear();
-                this.readBuffer.position(bytesInBuffer);
-                return; //returns if a packet is not fully read
-
+            if(bytesRead == 0) {
+                return;
             }
-        }
+
+            if (bytesRead == -1) {
+                try {
+                    this.socketChannel.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                this.inboundPacketQueue.add("c/");
+                return;
+            }
+            this.readBuffer.flip();
+            processFullPackets();
     }
 
-    void parsePacket(String message) {
-        /*
-        Inbound packet prefixes:
-        m/ - user message
-        s/ - server notofication
-        n/ - nickname list
-        */
-        String prefix = message.substring(0, 2);
+    void processFullPackets() {
+        while (this.readBuffer.hasRemaining()) {
+            int bytesLeft = this.readBuffer.limit() - this.readBuffer.position();
 
-        if (prefix.equals("m/")) {
-            mainController.updateTextArea(message.substring(2));
+            if (bytesLeft == 1) {
+                this.readBuffer.clear();
+                this.readBuffer.position(1);
+                return;
+            }
+            short packetSize = this.readBuffer.getShort();
+
+            if (packetSize > bytesLeft - 2) {
+                this.readBuffer.clear();
+                this.readBuffer.position(bytesLeft);
+                return;
+            }
+            byte[] packetBytes = new byte[packetSize];
+            this.readBuffer.get(packetBytes);
+            this.inboundPacketQueue.add(new String(packetBytes));
         }
-
-        if (prefix.equals("s/")) {
-            String serverMessage = message.substring(2);
-            mainController.updateTextArea(serverMessage);
-        }
-
-        if (prefix.equals("n/")) {
-            String[] nicknames = message.substring(3, message.length() - 1).split(",");
-            mainController.updateListNicknames(nicknames);
-        }
-
+        this.readBuffer.clear();
     }
 
 }

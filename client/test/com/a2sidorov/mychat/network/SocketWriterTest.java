@@ -10,11 +10,13 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Testing SocketWriter class")
 class SocketWriterTest {
 
     private static BlockingQueue<String> outboundPacketQueue;
+    private static BlockingQueue<String> inboundPacketQueue;
     private static ByteBuffer writeBuffer;
     private static SocketChannel socketChannelMocked;
     private static MainController mainControllerMocked;
@@ -25,14 +27,15 @@ class SocketWriterTest {
     static void initAll() {
         socketChannelMocked = mock(SocketChannel.class);
         writeBuffer = ByteBuffer.allocate(1024);
+        inboundPacketQueue = new ArrayBlockingQueue<>(64);
         outboundPacketQueue = new ArrayBlockingQueue<>(64);
         mainControllerMocked = mock(MainController.class);
 
         socketWriter = new SocketWriter(
                 socketChannelMocked,
                 writeBuffer,
-                outboundPacketQueue,
-                mainControllerMocked);
+                inboundPacketQueue,
+                outboundPacketQueue);
     }
 
     @Nested
@@ -53,18 +56,6 @@ class SocketWriterTest {
 
             socketWriter.writeToSocket();
             verify(socketChannelMocked).write(writeBuffer);
-        }
-
-        @DisplayName("when the server closed the connection then inform the user")
-        @Test
-        void writeToSocketTest2() throws IOException {
-            outboundPacketQueue.add("m/message");
-            when(socketChannelMocked.write(writeBuffer)).thenReturn(-1);
-
-            socketWriter.writeToSocket();
-            verify(mainControllerMocked).updateTextArea("Server has closed the connection");
-
-
         }
     }
 

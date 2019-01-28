@@ -2,6 +2,7 @@ package com.a2sidorov.mychat;
 
 import org.junit.jupiter.api.*;
 
+import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.HashMap;
 import java.util.Map;
@@ -34,7 +35,7 @@ class SocketProcessorTest {
     }
 
     @Nested
-    @DisplayName("Testing parsePackets class")
+    @DisplayName("Testing parsePackets method")
     class parsePacketsTest {
 
         @DisplayName("when a message packet is in the inbound queue then add it to the outbound queue")
@@ -48,7 +49,8 @@ class SocketProcessorTest {
 
         }
 
-        @DisplayName("when a nickname packet is in the inbound queue then add notification and the nickname list to the outbound queue")
+        @DisplayName("when a nickname packet is in the inbound queue " +
+                "then add notification and the nickname list to the outbound queue")
         @Test
         void parsePacketsTest2() {
 

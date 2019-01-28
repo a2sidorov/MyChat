@@ -4,14 +4,15 @@ import javax.swing.*;
 import javax.swing.text.DefaultCaret;
 import java.awt.*;
 
-
 public class MainView {
 
-    private JFrame frame;
     private JList listNicknames;
     private JTextArea textArea;
     private JTextField textField;
     private JButton buttonSend;
+
+    private JPanel panelMain;
+    private JFrame frame;
 
     public MainView(JFrame frame) {
         this.frame = frame;
@@ -32,21 +33,26 @@ public class MainView {
         buttonSend = new JButton("Send");
 
         /* Add UI elements to frame */
-        JPanel mainPanel = new JPanel(new BorderLayout());
+        panelMain = new JPanel(new BorderLayout());
 
-        //East
-        mainPanel.add(listNicknames, BorderLayout.EAST);
+        //east
+        panelMain.add(listNicknames, BorderLayout.EAST);
 
-        //Center
-        mainPanel.add(textChatSP, BorderLayout.CENTER);
+        //center
+        panelMain.add(textChatSP, BorderLayout.CENTER);
 
-        //South
+        //south
         JPanel panelInput = new JPanel(new BorderLayout());
         panelInput.add(textField, BorderLayout.CENTER);
         panelInput.add(buttonSend, BorderLayout.EAST);
-        mainPanel.add(panelInput, BorderLayout.SOUTH);
+        panelMain.add(panelInput, BorderLayout.SOUTH);
+    }
 
-        frame.getContentPane().add(mainPanel);
+    public void display() {
+        JPanel contentPane = (JPanel) this.frame.getContentPane();
+        contentPane.removeAll();
+        contentPane.repaint();
+        contentPane.add(panelMain);
         frame.setVisible(true);
     }
 
@@ -56,5 +62,13 @@ public class MainView {
 
     public JList getListNicknames() {
         return listNicknames;
+    }
+
+    public JTextField getTextField() {
+        return textField;
+    }
+
+    public JButton getButtonSend() {
+        return buttonSend;
     }
 }

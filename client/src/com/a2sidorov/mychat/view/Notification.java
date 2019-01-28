@@ -10,4 +10,5 @@ public class Notification {
                 "MyChat Error",
                 JOptionPane.ERROR_MESSAGE);
     }
+
 }

@@ -7,7 +7,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingQueue;
 
-public class SocketAccepter implements Runnable {
+class SocketAccepter implements Runnable {
 
     private InetAddress address;
     private int port;

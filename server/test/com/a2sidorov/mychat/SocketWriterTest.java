@@ -16,24 +16,15 @@ import java.util.concurrent.BlockingQueue;
 @DisplayName("Testing SocketWriter class")
 class SocketWriterTest {
 
-    private static BlockingQueue<String> outboundPacketQueue;
     private static ByteBuffer writeBuffer;
-    private static Map<String, String> nicknames;
 
     private static SocketWriter socketWriter;
 
-    private static String packetFull;
-    private static byte[] packetBytesFull;
-    private static byte[] packetBytesPart1;
-    private static byte[] packetBytesPart2;
-
     @BeforeAll
     static void initAll() {
-        outboundPacketQueue = new ArrayBlockingQueue<>(64);
-        nicknames = new HashMap<>();
         writeBuffer = ByteBuffer.allocate(1024);
 
-        socketWriter = new SocketWriter(outboundPacketQueue, writeBuffer, nicknames);
+        socketWriter = new SocketWriter(writeBuffer);
 
     }
 
@@ -73,16 +64,13 @@ class SocketWriterTest {
             when(socketChannelMocked.write(writeBuffer)).thenReturn(-1);
             when(socketChannelMocked.getRemoteAddress()).thenReturn(socketAddressMockaed);
 
-            nicknames.put(socketChannelMocked.getRemoteAddress().toString(), "Unknown");
-            System.out.println(nicknames);
+            SelectionKey keyMocked = mock(SelectionKey.class);
+            when(keyMocked.channel()).thenReturn(socketChannelMocked);
+            when(keyMocked.attachment()).thenReturn(null);
 
-            SelectionKey key = mock(SelectionKey.class);
-            when(key.channel()).thenReturn(socketChannelMocked);
-            when(key.attachment()).thenReturn(null);
+            socketWriter.writeToSocket(keyMocked, "m/Nickname: message");
 
-            socketWriter.writeToSocket(key, "m/Nickname: message");
-
-            assertEquals("s/Unknown has left the chat.", outboundPacketQueue.poll());
+            verify(keyMocked).cancel();
         }
     }
 

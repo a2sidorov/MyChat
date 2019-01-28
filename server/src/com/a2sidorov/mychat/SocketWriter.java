@@ -4,20 +4,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 
 class SocketWriter {
-    private BlockingQueue<String> outboundPacketQueue;
     private ByteBuffer writeBuffer;
-    private Map<String, String> nicknames;
 
-    SocketWriter(BlockingQueue<String> outboundPacketQueue,
-                 ByteBuffer writeBuffer,
-                 Map<String, String> nicknames) {
-        this.outboundPacketQueue = outboundPacketQueue;
+    SocketWriter(ByteBuffer writeBuffer) {
         this.writeBuffer = writeBuffer;
-        this.nicknames = nicknames;
     }
 
     void writeToSocket(SelectionKey key, String packet) throws IOException {
@@ -38,17 +30,11 @@ class SocketWriter {
         }
 
         if (bytesWritten == -1) {
-
-            String nickname = nicknames.remove(socketChannel.getRemoteAddress().toString());
-            this.outboundPacketQueue.add("s/" + nickname + " has left the chat.");
-
             key.cancel();
             socketChannel.close();
             return;
         }
-
         writeBuffer.clear();
     }
-
 
 }

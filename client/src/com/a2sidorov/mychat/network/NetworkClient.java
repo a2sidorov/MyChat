@@ -1,7 +1,5 @@
 package com.a2sidorov.mychat.network;
 
-import com.a2sidorov.mychat.controller.MainController;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -15,16 +13,16 @@ public class NetworkClient {
     private SocketChannel socketChannel;
     private ByteBuffer readBuffer;
     private ByteBuffer writeBuffer;
+    private BlockingQueue<String> inboundPacketQueue;
+
     private BlockingQueue<String> outboundPacketQueue;
-
-    private MainController mainController;
-
     private SocketReader socketReader;
     private SocketWriter socketWriter;
 
     public NetworkClient() {
         this.readBuffer = ByteBuffer.allocate(1024);
         this.writeBuffer = ByteBuffer.allocate(1024);
+        this.inboundPacketQueue = new ArrayBlockingQueue<>(64);
         this.outboundPacketQueue = new ArrayBlockingQueue<>(64);
     }
 
@@ -33,39 +31,36 @@ public class NetworkClient {
         InetAddress address = InetAddress.getByName(serverAddress);
         int port = Integer.parseInt(serverPort);
 
-        socketChannel = SocketChannel.open(
-                new InetSocketAddress(address, port)
-        );
+        socketChannel = SocketChannel.open(new InetSocketAddress(address, port));
 
         socketReader = new SocketReader(
                 this.socketChannel,
                 this.readBuffer,
-                this.mainController);
+                this.inboundPacketQueue);
 
         socketWriter = new SocketWriter(
                 this.socketChannel,
                 this.writeBuffer,
-                this.outboundPacketQueue,
-                this.mainController);
+                this.inboundPacketQueue,
+                this.outboundPacketQueue);
 
         Thread readerThread = new Thread(socketReader);
         Thread writerThread = new Thread(socketWriter);
 
         readerThread.start();
         writerThread.start();
-
     }
 
-    public void setMainController(MainController mainController) {
-        this.mainController = mainController;
+    public BlockingQueue<String> getInboundPacketQueue() {
+        return inboundPacketQueue;
     }
 
     public void sendMessage(String message) {
         outboundPacketQueue.add("m/" + message);
     }
 
-    public void sendNickname(String nickname) {
-        outboundPacketQueue.add("n/" + nickname);
+    public void sendNickname(String nickname) throws IOException {
+        outboundPacketQueue.add("n/" + socketChannel.getLocalAddress().toString() + "/" + nickname);
     }
 
 

@@ -19,10 +19,13 @@ import java.util.concurrent.BlockingQueue;
 
 public class MyChatServer {
 
-    private int port;
     private InetAddress address;
+    private int port;
 
-
+    private BlockingQueue<SocketChannel> socketQueue;
+    private BlockingQueue<String> inboundPacketQueue;
+    private BlockingQueue<String> outboundPacketQueue;
+    private Map<String, String> nicknames;
 
     private MyChatServer(Properties properties) {
         try {
@@ -31,6 +34,10 @@ public class MyChatServer {
             e.printStackTrace();
         }
         this.port = Integer.parseInt(properties.getProperty("port"));
+        this.socketQueue = new ArrayBlockingQueue<>(64);
+        this.inboundPacketQueue = new ArrayBlockingQueue<String>(64);
+        this.outboundPacketQueue = new ArrayBlockingQueue<String>(64);
+        this.nicknames = new HashMap<>();
     }
 
     //implementing the Singleton pattern
@@ -43,14 +50,7 @@ public class MyChatServer {
     }
 
     void start() {
-
-        BlockingQueue<SocketChannel> socketQueue = new ArrayBlockingQueue<>(64);
-        BlockingQueue<String> inboundPacketQueue = new ArrayBlockingQueue<String>(64);
-        BlockingQueue<String> outboundPacketQueue = new ArrayBlockingQueue<String>(64);
-        Map<String, String> nicknames = new HashMap<>();
-
         SocketAccepter socketAccepter = new SocketAccepter(this.address, this.port, socketQueue);
-
         SocketProcessor socketProcessor = new SocketProcessor(
                 socketQueue,
                 inboundPacketQueue,
@@ -60,16 +60,13 @@ public class MyChatServer {
         Thread accepterThread = new Thread(socketAccepter);
         Thread processorThread = new Thread(socketProcessor);
 
-
         accepterThread.start();
         processorThread.start();
     }
 
     public static void main(String[] args) {
-
         SettingsLoader config = new SettingsLoader();
         Properties properties = config.load();
-
         MyChatServer server = MyChatServer.getInstance(properties);
         server.start();
     }

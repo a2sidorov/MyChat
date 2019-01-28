@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Arrays;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 import com.a2sidorov.mychat.controller.MainController;
 import org.junit.jupiter.api.*;
@@ -15,32 +17,24 @@ class SocketReaderTest {
 
     private static SocketChannel socketChannelMocked;
     private static MainController mainControllerMocked;
+    private static BlockingQueue<String> inboundPacketQueue;
+    private static BlockingQueue<String> outboundPacketQueue;
     private static ByteBuffer readBuffer;
-
     private static SocketReader socketReader;
-
 
     @BeforeAll
     static void initAll() {
         socketChannelMocked = mock(SocketChannel.class);
         mainControllerMocked = mock(MainController.class);
+        inboundPacketQueue = new ArrayBlockingQueue<>(64);
+        outboundPacketQueue = new ArrayBlockingQueue<>(64);
         readBuffer = ByteBuffer.allocate(1024);
-
-        socketReader = new SocketReader(socketChannelMocked, readBuffer, mainControllerMocked);
+        socketReader = new SocketReader(socketChannelMocked, readBuffer, inboundPacketQueue);
     }
-
 
     @Nested
     @DisplayName("Testing readFromSocket")
     class readFromSocketTest {
-
-        @DisplayName("when the connection has been closed then notify the user")
-        @Test
-        void readFromSocketTest1() throws IOException {
-            when(socketChannelMocked.read(readBuffer)).thenReturn(-1);
-            socketReader.readFromSocket();
-            verify(mainControllerMocked).updateTextArea("Server has closed the connection");
-        }
 
         @DisplayName("when bytes are read then process full packets")
         @Test
@@ -56,107 +50,134 @@ class SocketReaderTest {
     @DisplayName("Testing processFullPackets method")
     class processFullPacketsTest {
 
-        @DisplayName("when a full packet is read then call parsePacket with it")
+        @DisplayName("when a full packet is read then clear the buffer")
         @Test
         void processFullPacketTest1() {
-            SocketReader socketReaderSpied = spy(socketReader);
-
-            String packet = "m/message";
+            String packet = "m/Nickname: message";
             readBuffer.putShort((short) packet.getBytes().length);
             readBuffer.put(packet.getBytes());
 
             readBuffer.flip();
 
-            socketReaderSpied.processFullPackets();
-            readBuffer.clear();
-            verify(socketReaderSpied).parsePacket(packet);
+            socketReader.processFullPackets();
+            assertEquals(0, readBuffer.position());
+            assertEquals(1024, readBuffer.limit());
         }
 
-        @DisplayName("when a partial packet is read then skip parsing until the packet is fully read")
+        @DisplayName("when a full packet is read then add it to the inbound queue")
         @Test
         void processFullPacketTest2() {
-            SocketReader socketReaderSpied = spy(socketReader);
+            String packet = "m/Nickname: message";
+            readBuffer.putShort((short) packet.getBytes().length);
+            readBuffer.put(packet.getBytes());
 
-            String fullPacket = "m/message";
-            String parialPacketPart1 = "m/mess";
-            String parialPacketPart2 = "age";
+            readBuffer.flip();
+
+            socketReader.processFullPackets();
+            assertEquals(packet, inboundPacketQueue.poll());
+        }
+
+        @DisplayName("when the partial size of a packet is read then leave it in buffer until the rest is read")
+        @Test
+        void processFullPacketTest3() {
+            readBuffer.put((byte) 0);
+            readBuffer.flip();
+
+            socketReader.processFullPackets();
+            assertEquals(1, readBuffer.position());
+            assertEquals(1024, readBuffer.limit());
+        }
+
+        @DisplayName("when the partial size of a packet is read then don't add it to the packet queue")
+        @Test
+        void processFullPacketTest4() {
+            readBuffer.put((byte) 0);
+            readBuffer.flip();
+
+            socketReader.processFullPackets();
+            assertEquals(null, inboundPacketQueue.poll());
+        }
+
+        @DisplayName("when a partial packet is read then leave bytes in buffer until a full packet arrives")
+        @Test
+        void processFullPacketTest5() {
+            String fullPacket = "m/Nickname: message";
+            String parialPacketPart1 = "m/Nickname: mess";
+
             readBuffer.putShort((short) fullPacket.getBytes().length);
             readBuffer.put(parialPacketPart1.getBytes());
             readBuffer.flip();
 
-            socketReaderSpied.processFullPackets();
-            verify(socketReaderSpied, never()).parsePacket(anyString());
-
-
-            readBuffer.put(parialPacketPart2.getBytes());
-            readBuffer.flip();
-
-            socketReaderSpied.processFullPackets();
-            verify(socketReaderSpied).parsePacket(fullPacket);
+            socketReader.processFullPackets();
+            assertEquals(2 + parialPacketPart1.getBytes().length, readBuffer.position());
+            assertEquals(1024, readBuffer.limit());
         }
 
-        @DisplayName("when the partial size  of a pcket is read then skip parsing until the packet is fully read")
+        @DisplayName("when a partial packet is read then leave bytes in buffer don't add it to inbound packet queue")
         @Test
-        void processFullPacketTest3() {
+        void processFullPacketTest6() {
+            String fullPacket = "m/Nickname: message";
+            String parialPacketPart1 = "m/Nickname: mess";
+
+            readBuffer.putShort((short) fullPacket.getBytes().length);
+            readBuffer.put(parialPacketPart1.getBytes());
+            readBuffer.flip();
+
+            socketReader.processFullPackets();
+            assertEquals(null, inboundPacketQueue.poll());
+        }
+
+        @DisplayName("when one and a parial size is read then process full one and leave the partial size in the buffer")
+        @Test
+        void processFullPacketTest7() {
+            String fullPacket = "m/Nickname: message";
+            readBuffer.putShort((short) fullPacket.getBytes().length);
+            readBuffer.put(fullPacket.getBytes());
+            readBuffer.put((byte) 0);
+            readBuffer.flip();
+
+            socketReader.processFullPackets();
+            assertEquals(1, readBuffer.position());
+            assertEquals(1024, readBuffer.limit());
+        }
+
+        @DisplayName("when one and a parial size is read then process full one and leave the partial size in the buffer")
+        @Test
+        void processFullPacketTest8() {
             SocketReader socketReaderSpied = spy(socketReader);
 
-            String fullPacket = "m/message";
+            String fullPacket = "m/Nickname: message";
+            readBuffer.putShort((short) fullPacket.getBytes().length);
+            readBuffer.put(fullPacket.getBytes());
             readBuffer.put((byte) 0);
             readBuffer.flip();
 
             socketReaderSpied.processFullPackets();
-            verify(socketReaderSpied, never()).parsePacket(anyString());
+            assertEquals(fullPacket, inboundPacketQueue.poll());
 
+        }
 
-            readBuffer.put((byte) fullPacket.getBytes().length);
-            readBuffer.flip();
-
-            socketReaderSpied.processFullPackets();
-            verify(socketReaderSpied, never()).parsePacket(fullPacket);
-
+        @DisplayName("when one and a partial packet is read then process full one and leave the partial packet in the buffer")
+        @Test
+        void processFullPacketTest9() {
+            String fullPacket = "m/Nickname: message";
+            String parialPacketPart1 = "m/Nickname: mess";
+            readBuffer.putShort((short) fullPacket.getBytes().length);
             readBuffer.put(fullPacket.getBytes());
+            readBuffer.putShort((short) fullPacket.getBytes().length);
+            readBuffer.put(parialPacketPart1.getBytes());
             readBuffer.flip();
 
-            socketReaderSpied.processFullPackets();
-            verify(socketReaderSpied).parsePacket(fullPacket);
-        }
-    }
-
-    @Nested
-    @DisplayName("Testing parsePacket method")
-    class parsePacketTest {
-
-        @DisplayName("when packet is a message then update the text area")
-        @Test
-        void parsePacketTest1() {
-            String packet = "m/user message";
-
-            socketReader.parsePacket(packet);
-            verify(mainControllerMocked).updateTextArea("user message");
+            socketReader.processFullPackets();
+            assertEquals(2 + parialPacketPart1.getBytes().length, readBuffer.position());
+            assertEquals(1024, readBuffer.limit());
         }
 
-        @DisplayName("when packet is a server message then update the text area")
-        @Test
-        void parsePacketTest2() {
-            String packet = "s/server message";
-
-            socketReader.parsePacket(packet);
-            verify(mainControllerMocked).updateTextArea("server message");
-        }
-
-        @DisplayName("when packet is a nickname list then update the user list")
-        @Test
-        void parsePacketTest3() {
-            String packet = "n/[nickname1,nickname2]";
-            String[] nicknames = packet.substring(3, packet.length() - 1).split(",");
-
-            socketReader.parsePacket(packet);
-            verify(mainControllerMocked).updateListNicknames(nicknames);
-        }
     }
 
     @AfterEach
     void tearDown() {
         readBuffer.clear();
+        inboundPacketQueue.clear();
     }
 }

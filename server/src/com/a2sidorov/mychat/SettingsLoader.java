@@ -9,13 +9,13 @@ import java.util.Properties;
 
 class SettingsLoader {
 
-    String configPath;
-    Properties properties;
+    private String configPath;
+    private Properties properties;
     private Map<String, String> defaultProperties;
 
     SettingsLoader() {
         String rootPath = System.getProperty("user.dir");
-        configPath = rootPath + "/.config";
+        configPath = rootPath + "/.mcserverconfig";
 
         properties = new Properties();
 
@@ -27,11 +27,13 @@ class SettingsLoader {
     Properties load() {
         try {
             properties.load(new FileInputStream(configPath));
+            System.out.println("Configuration file has been loaded.");
         } catch (IOException e) {
-            System.out.println("the file is not found");
+
             try {
                 properties.putAll(defaultProperties);
                 properties.store(new FileWriter(configPath), "--- Server Configuration ---");
+                System.out.println("Configuration file has been created.");
             } catch (IOException e1) {
                 e1.printStackTrace();
             }

@@ -4,16 +4,25 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.stream.Collectors;
 
 class SocketReader {
 
     private BlockingQueue<String> inboundPacketQueue;
+    private BlockingQueue<String> outboundPacketQueue;
+    private Map<String, String> nicknames;
     private ByteBuffer readBuffer;
 
     SocketReader(BlockingQueue<String> inboundPacketQueue,
-                 ByteBuffer readBuffer) {
+                 BlockingQueue<String> outboundPacketQueue,
+                 ByteBuffer readBuffer,
+                 Map<String, String> nicknames) {
         this.inboundPacketQueue = inboundPacketQueue;
+        this.outboundPacketQueue = outboundPacketQueue;
+        this.nicknames = nicknames;
         this.readBuffer = readBuffer;
     }
 
@@ -35,13 +44,24 @@ class SocketReader {
         }
 
         if (bytesRead == -1) {
+            String nickname = nicknames.remove(socketChannel.getRemoteAddress().toString());
+            this.outboundPacketQueue.add("s/" + nickname + " has left the chat.");
+
+            List<String> list = nicknames.entrySet()
+                    .stream()
+                    .map(e -> e.getValue())
+                    .collect(Collectors.toList());
+
+            this.outboundPacketQueue.add("n/" + list);
+
+            System.out.println(socketChannel + " has disconnected.");
             key.cancel();
             socketChannel.close();
             return;
         }
 
         this.readBuffer.flip();
-        readFullPackets();
+        processFullPackets();
 
         if (this.readBuffer.position() != this.readBuffer.limit()) {
             int numOfBytes = this.readBuffer.limit() - this.readBuffer.position();
@@ -52,7 +72,7 @@ class SocketReader {
         this.readBuffer.clear();
     }
 
-    void readFullPackets() {
+    void processFullPackets() {
 
         short packetSize;
         int bytesInBuffer;
@@ -78,6 +98,7 @@ class SocketReader {
 
             }
         }
+
     }
 
 }

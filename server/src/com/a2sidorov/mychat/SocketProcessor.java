@@ -6,7 +6,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collectors;
 
@@ -25,8 +24,6 @@ class SocketProcessor implements Runnable {
 
     private SocketReader socketReader;
     private SocketWriter socketWriter;
-
-    private PacketParser packetParser;
 
     SocketProcessor(BlockingQueue<SocketChannel> socketQueue,
                     BlockingQueue<String> inboundPacketQueue,
@@ -51,12 +48,11 @@ class SocketProcessor implements Runnable {
 
         this.socketReader = new SocketReader(
                 this.inboundPacketQueue,
-                this.readBuffer);
-
-        this.socketWriter = new SocketWriter(
                 this.outboundPacketQueue,
                 this.readBuffer,
                 this.nicknames);
+
+        this.socketWriter = new SocketWriter(this.readBuffer);
     }
 
     public void run() {
@@ -71,7 +67,7 @@ class SocketProcessor implements Runnable {
             }
 
             try {
-                Thread.sleep(100);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -82,8 +78,7 @@ class SocketProcessor implements Runnable {
         SocketChannel socketChannel = this.socketQueue.poll();
 
         while (socketChannel != null) {
-            //clients.add(new Client(socketChannel));
-            nicknames.put(socketChannel.getRemoteAddress().toString(), "Uknown");
+            nicknames.put(socketChannel.getRemoteAddress().toString(), "Unknown");
             socketChannel.configureBlocking(false);
             socketChannel.register(this.readSelector, SelectionKey.OP_READ);
             socketChannel.register(this.writeSelector, SelectionKey.OP_WRITE);
@@ -123,7 +118,6 @@ class SocketProcessor implements Runnable {
                     socketWriter.writeToSocket(key, packet);
                     keyIterator.remove();
                 }
-
                 selectionKeys.clear();
             }
             packet = outboundPacketQueue.poll();
@@ -133,12 +127,13 @@ class SocketProcessor implements Runnable {
     void parsePackets() {
         /*
         Inbound packet prefixes:
-        m/ - user message (ex: "m/Nickname: message");
-        n/ - nickname (ex: "n/127.0.0.1/nickname");
+        m/ - user message (eg: "m/Nickname: message");
+        n/ - nickname (eg: "n/127.0.0.1/nickname");
 
         Outbound packet prefixes:
-        s/ - server notification (ex: "s/notification");
-        n/ - nickname list (ex: "n/[nickname1, nickname2]");
+        m/ - user message (eg: "m/Nickname: message");
+        s/ - server notification (eg: "s/notification");
+        n/ - nickname list (eg: "n/[nickname1, nickname2]");
         */
 
         String inboundPacket = this.inboundPacketQueue.poll();
@@ -169,8 +164,5 @@ class SocketProcessor implements Runnable {
         }
 
     }
-
-
-
 
 }

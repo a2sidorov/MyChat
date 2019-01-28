@@ -1,17 +1,10 @@
 package com.a2sidorov.mychat.model;
 
 import com.a2sidorov.mychat.view.Notification;
-import org.mockito.internal.matchers.Not;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
-import javax.swing.*;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 public class Settings {
@@ -19,12 +12,11 @@ public class Settings {
     private String address;
     private String port;
     private String nickname;
-
     private String settingsPath;
     private Properties properties;
-    Notification notification;
+    private Notification notification;
 
-    public Settings() {
+    public Settings(Notification notification) {
         String rootPath = System.getProperty("user.dir");
         this.settingsPath = rootPath + "/.mcclientconfig";
         this.properties = new Properties();
@@ -32,7 +24,7 @@ public class Settings {
         this.address = properties.getProperty("address");
         this.port = properties.getProperty("port");
         this.nickname = properties.getProperty("nickname");
-        this.notification = new Notification();
+        this.notification = notification;
     }
 
     private void load(Properties properties) {
@@ -110,4 +102,5 @@ public class Settings {
     public Notification getNotification() {
         return notification;
     }
+
 }

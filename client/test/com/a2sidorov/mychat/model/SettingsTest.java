@@ -5,18 +5,18 @@ import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @DisplayName("Testing Settings class")
 class SettingsTest {
 
+    private static Notification notificationMocked;
     private static Settings settings;
 
     @BeforeAll
     static void initAll() {
-        settings = new Settings();
-
+        notificationMocked = mock(Notification.class);
+        settings = new Settings(notificationMocked);
     }
 
     @Nested
@@ -37,21 +37,19 @@ class SettingsTest {
         @DisplayName("when the port number is less than 1024 then call notification")
         @Test
         void setPortTest1() {
-            Notification mockedNotification = mock(Notification.class);
-            settings.notification = mockedNotification;
-
+            Notification notificationMocked = mock(Notification.class);
+            Settings settings = new Settings(notificationMocked);
             settings.setPort("13");
-            verify(mockedNotification).error(anyString());
+            verify(notificationMocked).error(anyString());
         }
 
         @DisplayName("when the port number is greater than 65535 then call notification")
         @Test
         void setPortTest2() {
-            Notification mockedNotification = mock(Notification.class);
-            settings.notification = mockedNotification;
-
+            Notification notificationMocked = mock(Notification.class);
+            Settings settings = new Settings(notificationMocked);
             settings.setPort("65536");
-            verify(mockedNotification).error(anyString());
+            verify(notificationMocked).error(anyString());
         }
 
         @DisplayName("when the port number is valid then set it to the settings")
@@ -72,7 +70,6 @@ class SettingsTest {
             settings.setNickname("Valid_Nickname");
             assertEquals("Valid_Nickname", settings.getNickname());
         }
-
     }
 
 }

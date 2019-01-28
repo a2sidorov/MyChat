@@ -1,18 +1,16 @@
 package com.a2sidorov.mychat.controller;
 
-import com.a2sidorov.mychat.model.MainModel;
 import com.a2sidorov.mychat.model.Settings;
 import com.a2sidorov.mychat.network.NetworkClient;
 import com.a2sidorov.mychat.view.IntroView;
-import com.a2sidorov.mychat.view.MainView;
 
-import javax.swing.*;
 import java.io.IOException;
 
 public class IntroController {
 
     private Settings settings;
     private IntroView introView;
+    private MainController mainController;
 
     public IntroController(Settings settings, IntroView introView) {
         this.settings = settings;
@@ -20,34 +18,27 @@ public class IntroController {
     }
 
     public void initView() {
-        introView.getTextFieldAddress().setText(settings.getAddress());
-        introView.getTextFieldPort().setText(settings.getPort());
-        introView.getTextFieldNickname().setText(settings.getNickname());
+        introView.display();
+        introView.getTextFieldAddress().setText(this.settings.getAddress());
+        introView.getTextFieldPort().setText(this.settings.getPort());
+        introView.getTextFieldNickname().setText(this.settings.getNickname());
     }
 
     public void initController() {
-        JFrame frame = introView.getFrame();
         introView.getConnectButton().addActionListener(e -> {
+            checkSettingsForChanges();
 
             NetworkClient networkClient = new NetworkClient();
-
             try {
-                networkClient.connectToServer(settings.getAddress(), settings.getPort());
+                networkClient.connectToServer(this.settings.getAddress(), this.settings.getPort());
+                networkClient.sendNickname(settings.getNickname());
             } catch (IOException ex) {
-                settings.getNotification().error("Cannot connect to the chat server");
+                this.settings.getNotification().error("Cannot connect to the chat server");
                 return;
             }
-
-            checkSettingsForChanges();
-            frame.getContentPane().removeAll();
-            frame.getContentPane().repaint();
-
-            SwingUtilities.invokeLater(() -> {
-                MainModel mainModel = new MainModel();
-                MainView mainView = new MainView(frame);
-                MainController mainController = new MainController(mainModel, mainView);
-                networkClient.setMainController(mainController);
-            });
+            mainController.display();
+            mainController.initController();
+            mainController.setNetworkClient(networkClient);
         });
     }
 
@@ -56,31 +47,32 @@ public class IntroController {
 
         //checking if the address was changed
         String newAddress = introView.getTextFieldAddress().getText().trim();
-        if (!settings.getAddress().equals(newAddress)) {
+        if (!this.settings.getAddress().equals(newAddress)) {
             areSettingsChanged = true;
-            settings.setAddress(newAddress);
+            this.settings.setAddress(newAddress);
         }
 
         //checking if the address was changed
         String newPort = introView.getTextFieldPort().getText().trim();
-        if (!settings.getPort().equals(newPort)) {
+        if (!this.settings.getPort().equals(newPort)) {
             areSettingsChanged = true;
-            settings.setPort(newPort);
+            this.settings.setPort(newPort);
         }
 
         //checking if the address was changed
         String newNickname = introView.getTextFieldNickname().getText().trim();
-        if (!settings.getNickname().equals(newNickname)) {
+        if (!this.settings.getNickname().equals(newNickname)) {
             areSettingsChanged = true;
-            settings.setNickname(newNickname);
+            this.settings.setNickname(newNickname);
         }
 
         if (areSettingsChanged) {
-            settings.updateConfigFile();
+            this.settings.updateConfigFile();
         }
-
     }
 
-
+    public void setMainController(MainController mainController) {
+        this.mainController = mainController;
+    }
 
 }
